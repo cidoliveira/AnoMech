@@ -49,11 +49,11 @@ internal static unsafe class PartyCreator
     // networkRoles: slots held by other real participants, spawned as SimNetworkPuppet (position
     // from the network, not AiManager); takes priority over `solo`. networkSeats: their lobby
     // name and job for the nameplate and party list, each falling back to the role preset's.
-    public static void Populate(SimParty party, SimPlayer player, uint playerJob, SimWorld world, uint? tankMaxHealth = null, PartyRole? roleOverride = null, bool solo = false, IReadOnlySet<PartyRole>? networkRoles = null, IReadOnlyDictionary<PartyRole, NetworkSeat>? networkSeats = null)
+    public static void Populate(SimParty party, SimPlayer player, uint playerJob, SimWorld world, uint? tankMaxHealth = null, PartyRole? roleOverride = null, bool solo = false, IReadOnlySet<PartyRole>? networkRoles = null, IReadOnlyDictionary<PartyRole, NetworkSeat>? networkSeats = null, byte? levelOverride = null)
     {
         var presets = roleOverride is { } skip
-            ? PartyPresets.ForRole(skip)
-            : PartyPresets.ForPlayerJob(playerJob);
+            ? PartyPresets.ForRole(skip, levelOverride)
+            : PartyPresets.ForPlayerJob(playerJob, levelOverride);
         var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
 
         for (int i = 0; i < presets.Count; i++)
@@ -97,6 +97,22 @@ internal static unsafe class PartyCreator
             var facingPlayer = MathF.Atan2(-localPos.X, -localPos.Z);
 
             var member = Spawn(preset, world, role, new Placement(localPos, facingPlayer), itemSheet, tankMaxHealth);
+            if (member != null) party.SetSlot(role, member);
+        }
+    }
+
+    internal static void FillMissing(SimParty party, SimWorld world,
+        Func<PartyRole, Placement> placement, byte? levelOverride = null)
+    {
+        if (party.Player == null) return;
+        var presets = PartyPresets.ForRole(party.PlayerRole, levelOverride);
+        var itemSheet = Plugin.DataManager.GetExcelSheet<Item>();
+        for (var i = 0; i < presets.Count; i++)
+        {
+            // Preserve the player and every existing member, including KO'd bots.
+            if (presets[i] is not { } preset || party.Get(i) != null) continue;
+            var role = (PartyRole)i;
+            var member = Spawn(preset, world, role, placement(role), itemSheet, tankMaxHealth: null);
             if (member != null) party.SetSlot(role, member);
         }
     }
@@ -164,7 +180,7 @@ internal static unsafe class PartyCreator
         chara->IsPartyMember = true;
         chara->IsAllianceMember = false;
         chara->IsFriend = false;
-        chara->IsOffhandDrawn = false;
+        chara->LifeSkillContainer.IsOffhandDrawn = false;
         chara->Timeline.IsWeaponDrawn = false;
         chara->CastInfo.IsCasting = false;
         chara->Mode = CharacterModes.Normal;

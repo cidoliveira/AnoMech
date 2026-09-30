@@ -7,6 +7,7 @@ using AnoMech.Core.Game.Party;
 using AnoMech.Core.Map;
 using AnoMech.Core.SimObjects;
 using AnoMech.Scenarios;
+using AnoMech.Scenarios.Fru;
 using AnoMech.Scenarios.Top.P2PartySynergy;
 using AnoMech.Scenarios.Top.P5Delta;
 using AnoMech.Scenarios.Top.P5Omega;
@@ -115,6 +116,12 @@ public sealed class Game : IDisposable
     private bool deathOccurredThisRun;
 
     private IScenario? activeScenario;
+    private ScenarioSequence? sequence;
+    private PartyRole? sequenceRole;
+    private int sequenceWaymark;
+    public string? SequenceProgress => sequence is { } run
+        ? $"All: {run.Index + 1}/{run.Scenarios.Count} — {DisplayName(run.Current)}{(run.Waiting ? " (between scenarios)" : "")}"
+        : null;
     private float scenarioElapsed;
     private long lastEventTick;
     public long LastEventTick => lastEventTick;
@@ -141,7 +148,7 @@ public sealed class Game : IDisposable
     {
         World = new SimWorld(Events);
         opcodeUpdater = new OpcodeUpdater();
-        Scenarios = new IScenario[]
+        var scenarios = new List<IScenario>
         {
             new UmadP1TeleTrouncingScenario(),
             new UmadP2ForsakenScenario(),
@@ -161,6 +168,8 @@ public sealed class Game : IDisposable
             new UltimateSuppressionScenario(),
             new UcobP5ExaflaresScenario()
         };
+        scenarios.AddRange(FruAllScenario.CreateCatalog());
+        Scenarios = scenarios;
 
         // Derive the zone tree from the flat registry (first-appearance order).
         var zoneOrder = new List<IZone>();
@@ -190,7 +199,8 @@ public sealed class Game : IDisposable
     public IReadOnlyList<IScenario> ScenariosOf(IPhase phase) => scenariosByPhase[phase];
 
     // selectedAi: index into the scenario's AiStrats of the strat to run, or null for
-    // solo (no doppels, no AI). Defaults to 0 = run the first strat with a full party.
+    // solo (no initial doppels; scenarios may add late support for party mechanics).
+    // Defaults to 0 = run the first strat with a full party.
     // selectedWaymark: index into the scenario's WaymarkPresets; ignored when it has none.
     public void RunScenario(IScenario scenario, PartyRole? roleOverride = null, int? selectedAi = 0, int selectedWaymark = 0)
         => RunScenario(new RunScenarioParams(scenario, roleOverride, selectedAi, selectedWaymark));
@@ -282,20 +292,26 @@ public sealed class Game : IDisposable
         return presets[0].Markers;
     }
 
-    // Null once the run is up, else why it was refused.
-    private string? RunScenarioInternal(IScenario scenario, PartyRole? roleOverride, int? selectedAi, int selectedWaymark, IReadOnlySet<PartyRole>? networkRoles, IReadOnlyDictionary<PartyRole, NetworkSeat>? networkSeats, bool isPeer)
+    // Null once the run is up, else why it was refused. continueSequence: the next step of a
+    // running sequence, which must not cancel it the way any other start does.
+    private string? RunScenarioInternal(IScenario scenario, PartyRole? roleOverride, int? selectedAi, int selectedWaymark, IReadOnlySet<PartyRole>? networkRoles, IReadOnlyDictionary<PartyRole, NetworkSeat>? networkSeats, bool isPeer, bool continueSequence = false)
     {
-        var solo = selectedAi is null;
-        var phase = scenario.Phase;
-        var zone = phase.Zone;
         // Hard gate: scenarios only ever run from an inn, and only from a state the server
         // isn't about to act on. Everything downstream (CharacterManager registration, zone
         // load, doppel spawn) assumes the inn; the deferred start may land in a state the click
         // didn't see, and ZoneSession.Enter asks once more before the firewall goes up.
         if (ZoneSession.StartBlockedReason() is { } blocked)
         {
+            sequence = null;
             Plugin.Log.Warning($"Game: refusing to start {scenario.Name} -- {blocked}.");
             return blocked;
+        }
+
+        // Peers get each scenario from the host, which has no message for a sequence step.
+        if (scenario is IScenarioSequence && (isPeer || networkRoles != null))
+        {
+            Plugin.Log.Warning($"Game: refusing to start {scenario.Name} -- sequential practice is solo only.");
+            return "sequential practice is solo only";
         }
 
         // Per-player settings the fight can't produce together. Empty for a peer and for solo,
@@ -311,11 +327,23 @@ public sealed class Game : IDisposable
         // Captured before ResetInternal clears activeScenario, so restarting the same
         // scenario (the normal way to extend a streak) doesn't look like a switch.
         var previousScenario = activeScenario;
-        ResetInternal();
+        ResetInternal(cancelSequence: !continueSequence);
+        if (scenario is IScenarioSequence all)
+        {
+            sequence = new ScenarioSequence(all.Scenarios);
+            sequenceRole = roleOverride;
+            sequenceWaymark = selectedWaymark;
+            scenario = sequence.Current;
+            selectedAi = ScenarioSequence.AiIndex(scenario);
+        }
+        var solo = selectedAi is null;
+        var phase = scenario.Phase;
+        var zone = phase.Zone;
 
         var player = Plugin.ObjectTable.LocalPlayer;
         if (player == null)
         {
+            sequence = null;
             Plugin.Log.Warning("Game: no local player; aborting scenario start");
             return "no local player";
         }
@@ -348,7 +376,10 @@ public sealed class Game : IDisposable
         World.ScenarioOrigin = zone.Origin;
         World.Map.ArmColliderDrops(zone.ColliderRemovalPoints.Select(World.Coordinates.ToGlobal));
         World.PlaceWaymarks(ResolveWaymarks(zone, selectedWaymark));
-        World.CreateParty(player.ClassJob.RowId, scenario.TankMaxHealth, roleOverride, solo, networkRoles, networkSeats);
+        // Bots are spawned at the duty's level, independently of the player's
+        // real job level. Unspecified zones retain the preset's default level.
+        World.CreateParty(player.ClassJob.RowId, scenario.TankMaxHealth, roleOverride, solo, networkRoles, networkSeats,
+            levelOverride: zone.Level == 0 ? null : zone.Level);
         // Client-asset setup a peer needs too (see IZone.RunClientSetup).
         zone.RunClientSetup(World);
         phase.RunClientSetup(World);
@@ -373,7 +404,7 @@ public sealed class Game : IDisposable
         scenario.RunInstanceEvents(World);
         // Entering the zone always starts at spawn; a restart only recenters the player
         // if they're standing outside the arena ring (otherwise they keep their position).
-        if (freshLoad)
+        if (freshLoad || sequence != null)
             TeleportPlayerToSpawn();
         else
             TeleportPlayerToSpawnIfOutsideArena();
@@ -440,6 +471,15 @@ public sealed class Game : IDisposable
             activeScenario.Tick(deltaSeconds, scenarioElapsed);
             UpdateMechanicResult(deltaSeconds);
         }
+        // Advance outside EventScheduler/World iteration: reset must not clear
+        // the scheduler or despawn children while either collection is ticking.
+        if (sequence is { } run)
+        {
+            var next = run.Tick(Events.Elapsed, deltaSeconds, firstFreezeScheduled);
+            if (run.Finished) sequence = null;
+            else if (next != null)
+                RunScenarioInternal(next, sequenceRole, ScenarioSequence.AiIndex(next), sequenceWaymark, null, null, isPeer: false, continueSequence: true);
+        }
 #if DEBUG
         // Gated so an idle client doesn't spam empty snapshots into the size-capped log.
         if (activeScenario != null || (Plugin.MultiplayerInstance?.IsRunning ?? false))
@@ -482,7 +522,8 @@ public sealed class Game : IDisposable
             if (Plugin.Config.EnableMechanicResultMarks)
                 World.Party.Player?.AddVfx(MechanicSuccessVfx, persistent: false);
         }
-        if (AutoRestart && lastRun is { } p)
+        // A running sequence advances on its own clock.
+        if (AutoRestart && sequence == null && lastRun is { } p)
             RunScenario(p);
     }
 
@@ -608,6 +649,7 @@ public sealed class Game : IDisposable
     // Menu label, e.g. "P5 Delta".
     public static string DisplayName(IScenario scenario)
     {
+        if (scenario is IScenarioSequence) return scenario.Name;
         var phase = scenario.Phase;
         return string.IsNullOrEmpty(phase.Name) ? scenario.Name : $"{phase.Name} {scenario.Name}";
     }
@@ -631,8 +673,9 @@ public sealed class Game : IDisposable
         });
     }
 
-    private void ResetInternal()
+    private void ResetInternal(bool cancelSequence = true)
     {
+        if (cancelSequence) sequence = null;
         activeScenario = null;
         scenarioElapsed = 0f;
         Events.Clear();

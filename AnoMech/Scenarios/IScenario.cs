@@ -33,6 +33,10 @@ public interface IScenario
     // How far into the phase's track the real fight is when this scenario starts.
     float BgmSecondsAtStart => 0f;
 
+    // Authored cleanup time on the event clock, used by sequential practice.
+    // Scenarios without a declared end cannot be included in a sequence.
+    float Duration => 0;
+
     void Run(SimWorld world, int? selectedAi);
     void Tick(float delta, float elapsed) { }
 
@@ -67,4 +71,9 @@ public interface IScenario
     // must override this to check that queue instead, since world.Events would otherwise
     // look permanently empty from the first tick.
     bool IsFinished(SimWorld world) => world.Events.IsEmpty;
+}
+
+public interface IScenarioSequence : IScenario
+{
+    IReadOnlyList<IScenario> Scenarios { get; }
 }

@@ -12,7 +12,6 @@ public sealed class EventScheduler
 {
     private readonly List<Entry> entries = new();
     private float elapsed;
-
     public float Elapsed => elapsed;
 
     // Moves the clock without firing; whatever falls due fires on the next Tick.

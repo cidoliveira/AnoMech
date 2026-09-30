@@ -84,6 +84,20 @@ public sealed class SimWorld : ISimObject, IDisposable
         return enemy;
     }
 
+    public SimMapEffect SpawnMapEffect(byte index, uint show, uint hide)
+    {
+        var effect = new SimMapEffect(Map, index, show, hide);
+        children.Add(effect);
+        return effect;
+    }
+
+    public SimVoiceLine SpawnVoiceLine(uint voiceId)
+    {
+        var voice = new SimVoiceLine(voiceId);
+        children.Add(voice);
+        return voice;
+    }
+
     // Allocates an EventObject actor in EventObjectManager's 40-slot pool and
     // wires it to the given EObj sheet row. Mirror of SpawnEnemy for the EObj
     // side of the engine — see SimEventObject / EventObjectSpawn for details.
@@ -153,11 +167,24 @@ public sealed class SimWorld : ISimObject, IDisposable
     // The live count is remotely driven on a peer, and each omen holds a native VfxObject.
     public bool CanSpawnOmen => children.Count(c => c is SimOmen) < Multiplayer.NetGuard.MaxLiveOmens;
 
-    public void SpawnOmen(string path, Placement placement, Vector3 scale, float durationSeconds)
+    // A null duration persists until the returned handle is despawned or reset.
+    // Scenery AVFX uses its authored world scale and may require a start trigger.
+    // Peers only replay timed omens: a persistent one would outlive the host's handle.
+    public SimOmen SpawnOmen(string path, Placement placement, Vector3 scale,
+        float? durationSeconds = null, uint? startTrigger = null)
     {
-        children.Add(new SimOmen(Coordinates, path, placement, scale, durationSeconds));
-        OmenSpawned?.Invoke(path, placement, scale, durationSeconds);
+        var omen = new SimOmen(Coordinates, path, placement, scale, durationSeconds, startTrigger);
+        children.Add(omen);
+        if (durationSeconds is { } duration && startTrigger == null)
+            OmenSpawned?.Invoke(path, placement, scale, duration);
+        return omen;
     }
+
+    // Explicit action-backed omen. This is useful when the action's native cast
+    // packet would expose an incorrect client-side telegraph, but its authored
+    // Omen resource is still the correct visual to display.
+    public void SpawnOmen(uint actionId, Placement placement, float durationSeconds)
+        => children.Add(new SimOmen(Coordinates, actionId, placement.Position, placement.Rotation, durationSeconds));
 
     // Standalone telegraph derived from `actionId`'s own Omen sheet entry (shape/scale
     // read from Action.CastType/EffectRange/XAxisModifier), for a boss ability whose real
@@ -183,13 +210,18 @@ public sealed class SimWorld : ISimObject, IDisposable
     // Reset's reverse-order teardown (tethers and enemies reference slot positions).
     // networkRoles: multiplayer slots claimed by other real participants — see
     // PartyCreator.Populate.
-    public void CreateParty(uint playerJob, uint? tankMaxHealth = null, PartyRole? roleOverride = null, bool solo = false, IReadOnlySet<PartyRole>? networkRoles = null, IReadOnlyDictionary<PartyRole, NetworkSeat>? networkSeats = null)
+    public void CreateParty(uint playerJob, uint? tankMaxHealth = null, PartyRole? roleOverride = null, bool solo = false, IReadOnlySet<PartyRole>? networkRoles = null, IReadOnlyDictionary<PartyRole, NetworkSeat>? networkSeats = null, byte? levelOverride = null)
     {
         var party = new SimParty();
-        PartyCreator.Populate(party, new SimPlayer(Coordinates), playerJob, this, tankMaxHealth, roleOverride, solo, networkRoles, networkSeats);
+        PartyCreator.Populate(party, new SimPlayer(Coordinates), playerJob, this, tankMaxHealth, roleOverride, solo, networkRoles, networkSeats, levelOverride);
         children.Add(party);
         Party = party;
     }
+
+    // Add late support bots to the existing party so damage, HUD, arena bounds,
+    // and reset all retain the same party owner and player slot.
+    public void FillMissingPartyMembers(Func<PartyRole, Placement> placement, byte? levelOverride = null)
+        => PartyCreator.FillMissing(Party, this, placement, levelOverride);
 
     public void Tick(float deltaSeconds)
     {

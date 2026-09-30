@@ -472,6 +472,9 @@ public unsafe class MainWindow : Window, IDisposable
 #endif
 
         DrawScenarioHeader(game);
+        if (game.SequenceProgress is { } progress) ImGui.TextWrapped(progress);
+        else if (SelectedScenario is IScenarioSequence)
+            ImGui.TextWrapped("Run every FRU scenario from P2 onward, with two seconds between scenarios.");
         if (inSession) DrawSession();
         DrawPrimaryActions(game, inSession);
         if (!inSession) DrawSoloOption(game);

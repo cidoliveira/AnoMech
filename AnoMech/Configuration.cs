@@ -89,6 +89,10 @@ public class Configuration : IPluginConfiguration
     // Env scene forced for every phase; SplatoonCompat.SceneOverrideOff uses each phase's own.
     public int SplatoonSceneOverride { get; set; } = Integrations.Splatoon.SplatoonCompat.SceneOverrideOff;
 
+    // Under SplatoonCompat: fire-and-forget head markers and tethers go through the game's
+    // ActorControl handler (see Core/Native/ActorControlFunctions) so BossMod and NyaDraw see them.
+    public bool RouteMarkersAndTethers { get; set; } = true;
+
     // The below exists just to make saving less cumbersome
     public void Save()
     {

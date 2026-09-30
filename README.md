@@ -27,11 +27,12 @@ The simulator now includes a beta feature that properly resolves most skills, tr
 As this feature is still in beta, some edge cases and less common interactions may not yet resolve correctly.
 
 
-### Splatoon presets and scripts
+### Splatoon, BossMod and NyaDraw
 
 With [Splatoon](https://github.com/PunishXIV/Splatoon) installed, its layouts (presets) and scripts
-for the simulated fight work inside a scenario. Toggle it under `/anomech config` →
-**Splatoon compatibility** (on by default).
+for the simulated fight work inside a scenario, and BossMod (and BossMod Reborn) and NyaDraw see
+the sim's head markers and tethers. Toggle it under `/anomech config` →
+**Plugin compatibility** (on by default).
 
 Boss casts, action effects, head-marker and other actor VFX, tethers and statuses already
 reach Splatoon, because the sim plays them through the same game functions server packets use.
@@ -57,14 +58,20 @@ block:
   Delta, UCOB). The sim used 1, so those scripts ignored its tethers; it now sends 15.
 * **Map effects.** Arena map effects are sent through the game function itself, so
   Splatoon's `OnMapEffect` fires no matter which plugin loaded first.
+* **Head markers and tethers as game events.** BossMod and NyaDraw read head markers and
+  tethers only from the game's ActorControl packet handler, which the sim never went through.
+  With **Send head markers and tethers as game events** on, timed head markers and all tethers
+  are played through that handler, so they show up like a server's. Markers a scenario removes
+  early keep the old path.
 
 Known gaps:
 * The scene is only known for the phases above.
-* Scripts that read `OnActorControl` head-marker packets or NPC chat lines (`OnMessage` with
-  boss dialogue) don't get those events. The sim spawns head markers as VFX, so
-  `OnVFXSpawn`-based scripts work. `OnDirectorUpdate` only sees the director updates the sim
-  replays itself, such as Commence at zone load. It never sees a wipe, but the combat reset
-  between pulls covers that.
+* NPC chat lines (`OnMessage` with boss dialogue, BossMod/NyaDraw NPC yells) aren't sent.
+  `OnDirectorUpdate` only sees the director updates the sim replays itself, such as Commence at
+  zone load. It never sees a wipe, but the combat reset between pulls covers that.
+* The ActorControl parameter layout for markers and tethers follows BossMod's packet decoder and
+  hasn't been checked against a live capture; turn the option off if a marker or tether looks
+  wrong.
 * Scenarios start mid-fight, so layouts timed from the start of combat run from the start of
   the scenario.
 

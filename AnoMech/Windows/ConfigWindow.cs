@@ -109,7 +109,7 @@ public class ConfigWindow : Window, IDisposable
     private void DrawSplatoonCompat()
     {
         var compat = configuration.SplatoonCompat;
-        if (ImGui.Checkbox("Splatoon compatibility", ref compat))
+        if (ImGui.Checkbox("Plugin compatibility (Splatoon, BossMod...)", ref compat))
         {
             configuration.SplatoonCompat = compat;
             configuration.Save();
@@ -127,6 +127,18 @@ public class ConfigWindow : Window, IDisposable
             ImGui.TextDisabled("Splatoon not loaded");
 
         if (!configuration.SplatoonCompat) return;
+
+        var route = configuration.RouteMarkersAndTethers;
+        if (ImGui.Checkbox("Send head markers and tethers as game events", ref route))
+        {
+            configuration.RouteMarkersAndTethers = route;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(
+                "Plays head markers and tethers through the game's own event handler, like the\n" +
+                "server does, so BossMod and NyaDraw see them. Turn off if a marker or tether\n" +
+                "looks wrong in a scenario.");
 
         var sceneOverride = configuration.SplatoonSceneOverride;
         ImGui.SetNextItemWidth(90 * ImGuiHelpers.GlobalScale);

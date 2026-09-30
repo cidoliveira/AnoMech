@@ -171,7 +171,11 @@ public sealed unsafe class SimTether : ISimObject
 
     private void CreateVfx()
     {
-        if (currentSource != null && currentTarget != null)
+        if (currentSource == null || currentTarget == null) return;
+        var sourceId = currentSource.GameObjectId.ObjectId;
+        if (ActorControlFunctions.CanDeliver(sourceId))
+            ActorControlFunctions.Tether(sourceId, Slot, TetherId, currentTarget.GameObjectId.ObjectId, Integrations.Splatoon.SplatoonCompat.TetherParam);
+        else
             VfxFunctions.SetTether((Character*)currentSource.BattleCharaPtr, Slot, TetherId, currentTarget.GameObjectId, Integrations.Splatoon.SplatoonCompat.TetherParam);
     }
 
@@ -183,7 +187,10 @@ public sealed unsafe class SimTether : ISimObject
         if (currentSource != null)
         {
             var ca = (Character*)currentSource.BattleCharaPtr;
-            if (VfxFunctions.GetTetherId(ca, Slot) == TetherId) VfxFunctions.ClearTether(ca, Slot);
+            if (VfxFunctions.GetTetherId(ca, Slot) != TetherId) return;
+            var sourceId = currentSource.GameObjectId.ObjectId;
+            if (ActorControlFunctions.CanDeliver(sourceId)) ActorControlFunctions.TetherCancel(sourceId, Slot, TetherId);
+            else VfxFunctions.ClearTether(ca, Slot);
         }
     }
 

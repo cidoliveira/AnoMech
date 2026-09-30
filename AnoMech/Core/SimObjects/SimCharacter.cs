@@ -172,13 +172,18 @@ public abstract unsafe class SimCharacter(Coordinates coordinates) : ISimObject,
     // persistent: true  → tracked by sim (might crash if we try to remove vfx after game already did that)
     // persistent: false → fire-and-forget (game is responsible for duration and cleaning of vfx)
     public void AddVfx(string path, float duration = 0f, bool persistent = true)
-        => AddVfx(path, duration, persistent, fromLockon: false);
+        => AddVfx(path, duration, persistent, fromLockon: false, lockonId: null);
 
     // fromLockon keeps a marker out of both VFX replication channels: its own id is what travels
     // (see AttachLockonVfx), and the derived path names no VfxPath constant a peer would accept.
-    private void AddVfx(string path, float duration, bool persistent, bool fromLockon)
+    private void AddVfx(string path, float duration, bool persistent, bool fromLockon, uint? lockonId)
     {
         if (!VfxFunctions.VfxPathExists(path) || !IsActive) return;
+        if (!persistent && TryDeliverAsTargetIcon(path, lockonId))
+        {
+            if (!fromLockon) QueuePendingVfx(path, duration);
+            return;
+        }
         if (persistent && FindVfx(path) is {} existing)
         {
             existing.Refresh(duration);
@@ -188,10 +193,25 @@ public abstract unsafe class SimCharacter(Coordinates coordinates) : ISimObject,
         if (persistent && spawned.IsActive)
             vfx.Add(spawned);
         else if (!persistent && !fromLockon)
-        {
-            if (pendingVfx.Count < AnoMech.Multiplayer.NetGuard.MaxVfxPerEntity) pendingVfx.Add((path, duration));
-            else droppedPendingVfx++;
-        }
+            QueuePendingVfx(path, duration);
+    }
+
+    private void QueuePendingVfx(string path, float duration)
+    {
+        if (pendingVfx.Count < AnoMech.Multiplayer.NetGuard.MaxVfxPerEntity) pendingVfx.Add((path, duration));
+        else droppedPendingVfx++;
+    }
+
+    // Only fire-and-forget markers: the native marker has no handle, so one the sim must remove
+    // early stays on the direct path.
+    private bool TryDeliverAsTargetIcon(string path, uint? lockonId)
+    {
+        if (!path.StartsWith("vfx/lockon/eff/", StringComparison.OrdinalIgnoreCase)) return false;
+        var entityId = GameObjectId.ObjectId;
+        if (!ActorControlFunctions.CanDeliver(entityId)) return false;
+        if ((lockonId ?? ActorControlFunctions.LockonIdForPath(path)) is not { } id) return false;
+        ActorControlFunctions.TargetIcon(entityId, id);
+        return true;
     }
 
     // Every non-persistent AddVfx since the last drain, sampled for peers like the lockons.
@@ -229,7 +249,7 @@ public abstract unsafe class SimCharacter(Coordinates coordinates) : ISimObject,
     public void AttachLockonVfx(uint lockonId, float duration = 0f, bool persistent = true)
     {
         if (VfxFunctions.LockonVfxIconName(lockonId) is not {} iconName) return;
-        AddVfx($"vfx/lockon/eff/{iconName}.avfx", duration, persistent, fromLockon: true);
+        AddVfx($"vfx/lockon/eff/{iconName}.avfx", duration, persistent, fromLockon: true, lockonId);
         LastLockonVfxId = lockonId;
         if (pendingLockonVfxIds.Count < AnoMech.Multiplayer.NetGuard.MaxLockonVfxPerEntity) pendingLockonVfxIds.Add(lockonId);
         else droppedPendingLockonVfxIds++;

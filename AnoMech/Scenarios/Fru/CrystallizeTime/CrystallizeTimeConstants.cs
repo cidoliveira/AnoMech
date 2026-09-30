@@ -49,7 +49,7 @@ internal static class CrystallizeTimeConstants
     public const uint AkhMornUsurper = 40247, AkhMornOracle = 40302, AkhHitUsurper = 40248, AkhHitOracle = 40303;
     public const ushort ClawStatus = 3263, FangStatus = 3264, AeroStatus = 2463, IceStatus = 2462;
     public const ushort WaterStatus = 2461, EruptionStatus = 2460, DarknessStatus = 2454;
-    public const ushort QuietusStatus = 4174, ReturnWaitingStatus = 2464, ReturnStatus = 2452, StunStatus = 4163;
+    public const ushort QuietusStatus = 4174, ReturnWaitingStatus = 4208, ReturnStatus = 2452, StunStatus = 4163;
     public const ushort MagicVulnerability = 2941, SoloTankInvulnerability = 409;
     public const ushort SlowTether = 133, FastTether = 134;
     public static readonly ushort[] Statuses = [ClawStatus, FangStatus, AeroStatus, IceStatus, WaterStatus,

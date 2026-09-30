@@ -53,6 +53,8 @@ block:
 * **Phase scene.** Sets the scene that scripts check with `Controller.Scene` and that layout
   scene locks use: TOP P5 = 6, TOP P6 = 7, Dancing Mad P2 = 7, Dancing Mad P3 = 8. Other
   phases keep the zone's own value. Use **Scene override** to force a scene for them.
+* **Tethers.** Real tethers carry a value of 15 that many Splatoon scripts check (FRU, TOP P5
+  Delta, UCOB). The sim used 1, so those scripts ignored its tethers; it now sends 15.
 * **Map effects.** Arena map effects are sent through the game function itself, so
   Splatoon's `OnMapEffect` fires no matter which plugin loaded first.
 

@@ -172,7 +172,7 @@ public sealed unsafe class SimTether : ISimObject
     private void CreateVfx()
     {
         if (currentSource != null && currentTarget != null)
-            VfxFunctions.SetTether((Character*)currentSource.BattleCharaPtr, Slot, TetherId, currentTarget.GameObjectId, 1);
+            VfxFunctions.SetTether((Character*)currentSource.BattleCharaPtr, Slot, TetherId, currentTarget.GameObjectId, Integrations.Splatoon.SplatoonCompat.TetherParam);
     }
 
     // Sentinel-checked clear: only wipe a slot we still own. A chained tether

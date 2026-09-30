@@ -140,6 +140,20 @@ public class ConfigWindow : Window, IDisposable
                 "server does, so BossMod and NyaDraw see them. Turn off if a marker or tether\n" +
                 "looks wrong in a scenario.");
 
+        var syncBossMod = configuration.SyncBossModModule;
+        if (ImGui.Checkbox("Move BossMod's module to the scenario's start", ref syncBossMod))
+        {
+            configuration.SyncBossModModule = syncBossMod;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(
+                "BossMod's fight modules follow the fight from the pull, so a scenario starting\n" +
+                "mid-fight leaves them in an earlier phase with no hints (and nothing for NyaDraw's\n" +
+                "BossMod AOEs). This moves the module to the scenario's mechanic when one is mapped.");
+        if (Plugin.BossModBridge.LastResult is { } bossModResult)
+            ImGui.TextDisabled($"BossMod: {bossModResult}");
+
         var sceneOverride = configuration.SplatoonSceneOverride;
         ImGui.SetNextItemWidth(90 * ImGuiHelpers.GlobalScale);
         if (ImGui.InputInt("Scene override", ref sceneOverride))

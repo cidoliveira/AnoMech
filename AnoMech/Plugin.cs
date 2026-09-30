@@ -61,6 +61,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static UserActions UserActions { get; private set; } = null!;
     internal static LogManager LogManager { get; private set; } = null!;
     internal static SplatoonCompat SplatoonCompat { get; private set; } = null!;
+    internal static Integrations.BossMod.BossModBridge BossModBridge { get; } = new();
     private ConfigWindow ConfigWindow { get; init; }
     // Static so MultiplayerManager can read the host's current selection.
     internal static MainWindow MainWindow { get; private set; } = null!;
@@ -232,6 +233,8 @@ public sealed class Plugin : IDalamudPlugin
         catch (Exception e) { Core.DiagnosticLog.Warn($"[Plugin] Game.Tick threw: {e}"); }
         try { SplatoonCompat.Tick(); }
         catch (Exception e) { Core.DiagnosticLog.Warn($"[Plugin] SplatoonCompat.Tick threw: {e}"); }
+        try { BossModBridge.Tick(fw->FrameDeltaTime); }
+        catch (Exception e) { Core.DiagnosticLog.Warn($"[Plugin] BossModBridge.Tick threw: {e}"); }
         try { UserActions.Tick(fw->FrameDeltaTime); }
         catch (Exception e) { Core.DiagnosticLog.Warn($"[Plugin] UserActions.Tick threw: {e}"); }
         try

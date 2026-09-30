@@ -417,6 +417,8 @@ public sealed class Game : IDisposable
             scenarioElapsed = 0f;
         }
         Plugin.SplatoonCompat?.OnScenarioStarted(phase);
+        // A peer's BossMod follows its own client's actors like the host's does.
+        Plugin.BossModBridge.OnScenarioStarted(scenario.BossModStart);
 
         // Reconcile BGM to the new scenario. Bgm.Play is idempotent, so switching
         // between same-track scenarios (e.g. the P5 phases) keeps playing without
@@ -680,6 +682,7 @@ public sealed class Game : IDisposable
         scenarioElapsed = 0f;
         Events.Clear();
         Plugin.SplatoonCompat?.OnScenarioStopped();
+        Plugin.BossModBridge.OnScenarioStopped();
         World.Despawn();
         // A wipe or Leave never reaches the scenario's own cleanup.
         Core.Native.VfxSpawnLog.Disable();

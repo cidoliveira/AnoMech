@@ -23,6 +23,12 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
 {
     public string Name => "Black Hole";
     public IPhase Phase => UmadZone.P3;
+
+    // Boss Mod's UMADStates P3Earthquake: 0x200 activates the Earthquake raidwide, Nothingness and
+    // Earth hints components, 0x210 waits for the Earthquake cast this scenario opens with.
+    // UNVERIFIED in game; state ids from Boss Mod's source.
+    public AnoMech.Integrations.BossMod.BossModStart BossModStart { get; } =
+        new("BossMod.Dawntrail.Ultimate.UMAD.UMAD", Phase: 2, StatePath: [0x02030200, 0x02030210]);
     public bool SupportsMultiplayer => true;
     public uint? TankMaxHealth => Tunables.RealTankMaxHealth;
 

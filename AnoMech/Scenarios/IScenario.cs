@@ -33,6 +33,9 @@ public interface IScenario
     // How far into the phase's track the real fight is when this scenario starts.
     float BgmSecondsAtStart => 0f;
 
+    // Where this scenario begins in BossMod's module for the fight; null leaves BossMod alone.
+    AnoMech.Integrations.BossMod.BossModStart? BossModStart => null;
+
     // Authored cleanup time on the event clock, used by sequential practice.
     // Scenarios without a declared end cannot be included in a sequence.
     float Duration => 0;

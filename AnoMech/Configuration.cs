@@ -93,6 +93,10 @@ public class Configuration : IPluginConfiguration
     // ActorControl handler (see Core/Native/ActorControlFunctions) so BossMod and NyaDraw see them.
     public bool RouteMarkersAndTethers { get; set; } = true;
 
+    // Under SplatoonCompat: move BossMod's fight module to where the scenario starts (see
+    // Integrations/BossMod/BossModBridge).
+    public bool SyncBossModModule { get; set; } = true;
+
     // The below exists just to make saving less cumbersome
     public void Save()
     {

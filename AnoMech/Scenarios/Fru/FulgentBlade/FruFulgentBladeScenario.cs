@@ -19,6 +19,8 @@ public sealed class FruFulgentBladeScenario : IScenario
     public IReadOnlyList<IScenarioAi> AiStrats { get; } = [new FulgentBladeAi()];
 
     private const float ArrowLeadTime = 2.3f;
+    // Each group begins 7s before its first snapshot (13.5/17.5/21.5 -> 20.5/24.5/28.5).
+    private const float FirstPathCastSeconds = 7f;
 
     private SimWorld world = null!;
     private SimParty party = null!;
@@ -119,6 +121,17 @@ public sealed class FruFulgentBladeScenario : IScenario
         // native colors/brightness and keep the same dark/light orientation.
         for (var line = 0; line < FulgentBladePattern.WavesPerGroup / 2; line++)
             initialSeams[group, line]?.Trigger(Vfx.SeamChargeTrigger);
+
+        // Each strip opens with the helper's own 7s Path of Light/Darkness cast, whose release is
+        // the first hit; only the later hits are the instant Rest actions. Splatoon's Fulgent Blade
+        // script and Boss Mod find the strips by these casts (position, facing, cast progress).
+        for (var wave = 0; wave < FulgentBladePattern.WavesPerGroup; wave++)
+        {
+            if (waveHelpers[group, wave] is not { IsActive: true } helper) continue;
+            var first = pattern.Wave(group, wave);
+            helper.Cast(first.IsLight ? ActionId.PathOfLightFirst : ActionId.PathOfDarknessFirst,
+                castSeconds: FirstPathCastSeconds, animationLock: 0f);
+        }
     }
 
     private void TelegraphGroup(int group)
@@ -146,7 +159,8 @@ public sealed class FruFulgentBladeScenario : IScenario
             var action = definition.IsLight ? ActionId.PathOfLightRest : ActionId.PathOfDarknessRest;
             var placement = new Placement(definition.Position, definition.Rotation);
             var helper = waveHelpers[group, wave];
-            if (helper is { IsActive: true })
+            // The first hit is the release of the cast BeginExalineGroup started.
+            if (helper is { IsActive: true } && hit > 0)
             {
                 helper.SetPosition(definition.Position);
                 helper.Cast(action, castSeconds: 0f, animationLock: 0f);

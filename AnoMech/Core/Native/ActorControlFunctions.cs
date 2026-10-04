@@ -38,7 +38,10 @@ internal static unsafe class ActorControlFunctions
     }
 
     public static void TargetIcon(uint entityId, uint lockonId)
-        => handler(entityId, TargetIconCategory, lockonId, 0, 0, 0, 0, 0, 0, 0, InvalidEntityId, 0);
+    {
+        DiagnosticLog.Info($"[ActorControl] TargetIcon lockon {lockonId} on 0x{entityId:X}{(entityId == Plugin.ObjectTable.LocalPlayer?.EntityId ? " (local player)" : "")}.");
+        handler(entityId, TargetIconCategory, lockonId, 0, 0, 0, 0, 0, 0, 0, InvalidEntityId, 0);
+    }
 
     public static void Tether(uint sourceEntityId, byte slot, ushort tetherId, uint targetEntityId, byte param)
         => handler(sourceEntityId, TetherCategory, slot, tetherId, targetEntityId, param, 0, 0, 0, 0, InvalidEntityId, 0);

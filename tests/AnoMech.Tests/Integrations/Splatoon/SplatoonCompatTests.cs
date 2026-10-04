@@ -42,6 +42,7 @@ public class SplatoonCompatTests
     [Test]
     public void KnownPhasesCarryTheScenesSplatoonScriptsExpect()
     {
+        Assert.That(TopZone.P2.EnvScene, Is.EqualTo((byte)3));
         Assert.That(TopZone.P5.EnvScene, Is.EqualTo((byte)6));
         Assert.That(TopZone.P6.EnvScene, Is.EqualTo((byte)7));
         Assert.That(UmadZone.P2.EnvScene, Is.EqualTo((byte)7));

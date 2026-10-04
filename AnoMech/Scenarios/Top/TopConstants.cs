@@ -8,12 +8,14 @@ using static AnoMech.Scenarios.Top.TopConstants;
 
 namespace AnoMech.Scenarios.Top;
 
-public sealed record OmegaAttack(byte AttributeFlags, uint ActionId)
+// ModelState is the Timeline.ModelState the server gives the clone for this stance, which
+// Splatoon reads as its transformation id (Omega-M shield and Omega-F legs = 4, else 0).
+public sealed record OmegaAttack(byte AttributeFlags, uint ActionId, byte ModelState)
 {
-    public static readonly OmegaAttack Legs   = new(49, TopConstants.ActionId.SuperliminalSteel);
-    public static readonly OmegaAttack Staff  = new(16, TopConstants.ActionId.OptimizedBlizzardIII);
-    public static readonly OmegaAttack Sword  = new(16, TopConstants.ActionId.EfficientBladework);
-    public static readonly OmegaAttack Shield = new(0,  TopConstants.ActionId.BeyondStrength);
+    public static readonly OmegaAttack Legs   = new(49, TopConstants.ActionId.SuperliminalSteel, 4);
+    public static readonly OmegaAttack Staff  = new(16, TopConstants.ActionId.OptimizedBlizzardIII, 0);
+    public static readonly OmegaAttack Sword  = new(16, TopConstants.ActionId.EfficientBladework, 0);
+    public static readonly OmegaAttack Shield = new(0,  TopConstants.ActionId.BeyondStrength, 4);
 }
 
 public sealed record GlitchType(ushort StatusId, Predicate<SimTether> Condition)

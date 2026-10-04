@@ -80,6 +80,16 @@ public unsafe class SimNpc : SimCharacter
         TimelineFunctions.SetModelState(&chara->Timeline, value);
     }
 
+    // The bare field, without SetModelState's rebuild: what plugins read (Splatoon's transformation
+    // id) for an actor whose look the sim already drew another way, e.g. through ModeAttributeFlags.
+    // Timeline resets zero it, so write it after any action timeline that precedes the read.
+    public void WriteModelStateField(byte value)
+    {
+        var chara = BattleCharaPtr;
+        if (chara == null) return;
+        chara->Timeline.ModelState = value;
+    }
+
     // Sampled for peers.
     public byte ModelState
     {

@@ -52,7 +52,7 @@ block:
   after their job (`Warrior`, `White Mage`, ...) on your world. Role-mode lists with
   **Fill automatically** work best, because which job the bots get depends on your own.
 * **Phase scene.** Sets the scene that scripts check with `Controller.Scene` and that layout
-  scene locks use: TOP P5 = 6, TOP P6 = 7, Dancing Mad P2 = 7, Dancing Mad P3 = 8. Other
+  scene locks use: TOP P2 = 3, TOP P5 = 6, TOP P6 = 7, Dancing Mad P2 = 7, Dancing Mad P3 = 8. Other
   phases keep the zone's own value. Use **Scene override** to force a scene for them.
 * **Tethers.** Real tethers carry a value of 15 that many Splatoon scripts check (FRU, TOP P5
   Delta, UCOB). The sim used 1, so those scripts ignored its tethers; it now sends 15.

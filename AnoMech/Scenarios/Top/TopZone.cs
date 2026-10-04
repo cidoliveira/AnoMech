@@ -9,7 +9,7 @@ namespace AnoMech.Scenarios.Top;
 public sealed class TopZone : IZone
 {
     public static readonly TopZone Instance = new();
-    public static readonly Phase P2 = new(Instance, "P2", 78, BgmId.TopP2);
+    public static readonly Phase P2 = new(Instance, "P2", 78, BgmId.TopP2, envScene: 3);
     public static readonly Phase P5 = new(Instance, "P5", 174, BgmId.TopP5, envScene: 6);
     public static readonly Phase P6 = new(Instance, "P6", 175, BgmId.TopP6, envScene: 7);
 

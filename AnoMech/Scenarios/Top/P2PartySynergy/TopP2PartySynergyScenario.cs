@@ -175,6 +175,7 @@ public sealed class TopP2PartySynergyScenario : IMultiplayerReplayable
         world.Events.Add(10.07f, () => omega_F_4000A4FD?.SetPosition(state.AttackDir.Apply(new Placement(new Vector3(0f, 0f, -10f), 0))));
         world.Events.Add(10.16f, () => omega_F_4000A4FD?.PlayActionTimeline(TimelineId.Spawn));
         world.Events.Add(10.16f, () => omega_F_4000A4FD?.SetVisible(true));
+        world.Events.Add(10.17f, () => omega_F_4000A4FD?.WriteModelStateField(state.AttackF.ModelState));
         world.Events.Add(13.81f, () => omega_F_4000A4FD?.Cast(state.AttackF.ActionId, castSeconds: 1.200f, targetId: omega_F_4000A4FD?.GameObjectId, omenDelay: Duration.OmegaAttackOmenDelay));
         world.Events.Add(15.01f, () => topUtils.ResolveOmegaAttack(omega_F_4000A4FD, state.AttackF.ActionId));
         world.Events.Add(18.44f, () => omega_F_4000A4FD?.PlayActionTimeline(TimelineId.WarpOut));
@@ -189,6 +190,7 @@ public sealed class TopP2PartySynergyScenario : IMultiplayerReplayable
         world.Events.Add(10.07f, () => omega_M_4000A4FE?.SetPosition(state.AttackDir.Flip().Apply(new Placement(new Vector3(0, 0, -10f), 0f))));
         world.Events.Add(10.16f, () => omega_M_4000A4FE?.PlayActionTimeline(TimelineId.Spawn));
         world.Events.Add(10.16f, () => omega_M_4000A4FE?.SetVisible(true));
+        world.Events.Add(10.17f, () => omega_M_4000A4FE?.WriteModelStateField(state.AttackM.ModelState));
         world.Events.Add(13.81f, () => omega_M_4000A4FE?.Cast(state.AttackM.ActionId, castSeconds: 1.200f, targetId: omega_M_4000A4FE?.GameObjectId, omenDelay: Duration.OmegaAttackOmenDelay));
         world.Events.Add(15.01f, () => topUtils.ResolveOmegaAttack(omega_M_4000A4FE, state.AttackM.ActionId));
         world.Events.Add(18.44f, () => omega_M_4000A4FE?.PlayActionTimeline(TimelineId.WarpOut));

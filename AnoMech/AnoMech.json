@@ -1,20 +1,22 @@
 {
-    "Author": "Anomek",
-    "Name": "AnoMech",
+    "Author": "cidoliveira (fork do AnoMech de Anomek)",
+    "Name": "Lazarek",
     "MinimumDalamudVersion": "15.0.3.5",
-    "Punchline": "Another FFXIV mechanics simulator. Go to an inn and start practice.",
-    "Description": "Spawns fake party members and bosses client-side so you can practice raid mechanics without a full party.",
-    "RepoUrl": "https://github.com/anomek/AnoMech",
-    "IconUrl": "https://raw.githubusercontent.com/anomek/AnoMech/master/images/icon.png",
+    "Punchline": "TESTE DE CHEATS IN-RAID PARA AQUELES QUE O JOGO PARECE A VISÃO DO EXTERMINADOR DO FUTURO",
+    "Description": "TESTE DE CHEATS IN-RAID PARA AQUELES QUE O JOGO PARECE A VISÃO DO EXTERMINADOR DO FUTURO\n\nFork do AnoMech (simulador de mecânicas de ultimate, solo, na inn) com Splatoon, BossMod e NyaDraw funcionando dentro das simulações, e os cenários de FRU.\n\nDesinstale o AnoMech original antes de instalar: os dois são o mesmo plugin por dentro.",
+    "RepoUrl": "https://github.com/cidoliveira/AnoMech/tree/feat/plugin-compat",
+    "IconUrl": "https://raw.githubusercontent.com/cidoliveira/AnoMech/dalamud-repo/lazarek.png",
     "Tags": [
         "top",
         "umad",
         "dmu",
         "kefka",
+        "fru",
         "omega",
         "protocol",
         "ultimate",
         "practice",
-        "simulator"
+        "simulator",
+        "splatoon"
     ]
 }

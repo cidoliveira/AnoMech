@@ -1,11 +1,11 @@
-"""Write the Lazarek Dalamud repo.json from the packaged plugin manifest.
+"""Write Lazarek's entry for the cidoliveira/DalamudPlugins repository.
 
 Usage:
-    python lazarek_repo.py <packaged AnoMech.json> <release tag> <github owner/repo> <output repo.json>
+    python lazarek_manifest.py <packaged AnoMech.json> <release tag> <github owner/repo> <output .json>
 
-Dalamud reads repo.json as a list of manifests, each with download links. The links point at
-the tag's own asset rather than /releases/latest, so a cached repo.json never pairs an old
-version number with a newer zip.
+The entry is the packaged plugin manifest plus its download links; the DalamudPlugins repo merges
+every plugin's entry into pluginmaster.json. The links point at the tag's own asset rather than
+/releases/latest, so a cached pluginmaster never pairs an old version number with a newer zip.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def main(argv: list[str]) -> int:
         "LastUpdate": int(time.time()),
     })
     with open(output, "w", encoding="utf-8", newline="\n") as f:
-        json.dump([manifest], f, ensure_ascii=False, indent=2)
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
         f.write("\n")
     print(f"{output}: {manifest['Name']} {manifest['AssemblyVersion']} -> {url}")
     return 0

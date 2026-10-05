@@ -5,7 +5,7 @@
     "Punchline": "TESTE DE CHEATS IN-RAID PARA AQUELES QUE O JOGO PARECE A VISÃO DO EXTERMINADOR DO FUTURO",
     "Description": "TESTE DE CHEATS IN-RAID PARA AQUELES QUE O JOGO PARECE A VISÃO DO EXTERMINADOR DO FUTURO\n\nFork do AnoMech (simulador de mecânicas de ultimate, solo, na inn) com Splatoon, BossMod e NyaDraw funcionando dentro das simulações, e os cenários de FRU.\n\nDesinstale o AnoMech original antes de instalar: os dois são o mesmo plugin por dentro.",
     "RepoUrl": "https://github.com/cidoliveira/AnoMech/tree/feat/plugin-compat",
-    "IconUrl": "https://raw.githubusercontent.com/cidoliveira/AnoMech/dalamud-repo/lazarek.png",
+    "IconUrl": "https://raw.githubusercontent.com/cidoliveira/DalamudPlugins/main/icons/lazarek.png",
     "Tags": [
         "top",
         "umad",

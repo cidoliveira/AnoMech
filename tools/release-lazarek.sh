@@ -3,13 +3,14 @@
 #   1. sets AnoMech.csproj's version (Dalamud only offers an update when it goes up),
 #   2. builds the Release package,
 #   3. creates the GitHub release with latest.zip,
-#   4. regenerates repo.json on the dalamud-repo branch.
+#   4. updates Lazarek's entry in cidoliveira/DalamudPlugins and its pluginmaster.json.
 #
 # Usage: tools/release-lazarek.sh <version>      e.g. tools/release-lazarek.sh 0.4.2.2
 set -euo pipefail
 
 version="${1:?usage: tools/release-lazarek.sh <version, e.g. 0.4.2.2>}"
 repo="cidoliveira/AnoMech"
+plugins_repo="cidoliveira/DalamudPlugins"
 tag="lazarek-v${version}"
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
@@ -34,14 +35,14 @@ gh release create "$tag" "$package/latest.zip" \
     --title "Lazarek ${version}" \
     --notes "Lazarek ${version} ($(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD))."
 
-worktree="$(mktemp -d)"
-trap 'git worktree remove --force "$worktree" >/dev/null 2>&1 || true' EXIT
-git fetch -q origin dalamud-repo
-git worktree add -q -B dalamud-repo "$worktree" origin/dalamud-repo
-python tools/lazarek_repo.py "$package/AnoMech.json" "$tag" "$repo" "$worktree/repo.json"
-git -C "$worktree" add repo.json
-git -C "$worktree" commit -q -m "chore: publish Lazarek ${version}"
-git -C "$worktree" push -q origin dalamud-repo
+checkout="$(mktemp -d)"
+trap 'rm -rf "$checkout"' EXIT
+git clone -q "https://github.com/${plugins_repo}.git" "$checkout"
+python tools/lazarek_manifest.py "$package/AnoMech.json" "$tag" "$repo" "$checkout/plugins/Lazarek.json"
+python "$checkout/tools/build_pluginmaster.py"
+git -C "$checkout" add plugins/Lazarek.json pluginmaster.json
+git -C "$checkout" commit -q -m "chore: publish Lazarek ${version}"
+git -C "$checkout" push -q origin HEAD
 
 echo "Published ${tag}. Testers get it from:"
-echo "  https://raw.githubusercontent.com/${repo}/dalamud-repo/repo.json"
+echo "  https://raw.githubusercontent.com/${plugins_repo}/main/pluginmaster.json"

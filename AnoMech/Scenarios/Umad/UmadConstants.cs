@@ -181,7 +181,11 @@ public static class UmadConstants
         public const ushort TelePortent_13D9          = (ushort)0x13D9;
         public const ushort TelePortent               = (ushort)0x13DA;
         public const ushort SpellsTrouble             = (ushort)0x13DB;
-        public const ushort Unknown13DC               = (ushort)0x13DC;
+        // Hidden (unnamed) per-player companions of the Forsaken lockons: each player carries
+        // the one matching their current marker. Splatoon's Forsaken scripts read these, not the VFX.
+        public const ushort ForsakenStackMarker       = (ushort)0x13DC; // 5084, lockon ForsakenStack
+        public const ushort ForsakenSpreadMarker      = (ushort)0x13DD; // 5085, lockon ForsakenChariot
+        public const ushort ForsakenConeMarker        = (ushort)0x13DE; // 5086, lockon ForsakenCone
         public const ushort Unknown13DD               = (ushort)0x13DD;
         public const ushort Unknown13DE               = (ushort)0x13DE;
         public const ushort Unbecoming                = (ushort)0x154C;

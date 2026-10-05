@@ -133,7 +133,22 @@ public sealed class UmadP2ForsakenScenario : IMultiplayerReplayable
     {
         
         world.Events.Add(11.04f, () => party.ForEachActive(p => p.AddStatus(StatusId.SpellsTrouble, duration: 999f, stacks: (ushort)4, overrideStacks: true)));
-        world.Events.Add(11.04f, () => party.ForEachActive(p => p.AddStatus(StatusId.Unknown13DC)));
+        world.Events.Add(11.04f, () => party.ForEachActive(p => ApplyMarkerStatus(p, state.Lockons[((ISimPartyMember)p).Role])));
+    }
+
+    private static void ApplyMarkerStatus(SimCharacter character, uint lockon)
+    {
+        character.RemoveStatus(StatusId.ForsakenStackMarker);
+        character.RemoveStatus(StatusId.ForsakenSpreadMarker);
+        character.RemoveStatus(StatusId.ForsakenConeMarker);
+        ushort? marker = lockon switch
+        {
+            LockonId.ForsakenStack => StatusId.ForsakenStackMarker,
+            LockonId.ForsakenChariot => StatusId.ForsakenSpreadMarker,
+            LockonId.ForsakenCone => StatusId.ForsakenConeMarker,
+            _ => null,
+        };
+        if (marker is { } status) character.AddStatus(status);
     }
 
     private void Run_PlayerLockons()
@@ -253,11 +268,12 @@ public sealed class UmadP2ForsakenScenario : IMultiplayerReplayable
                state.Lockons[role] = lockons[i];
                s += $"{role}={lockons[i]},";
            }
-           else 
+           else
            {
                state.Lockons[role] = 0;
                s += $"{role}=0,";
            }
+           ApplyMarkerStatus(list[i], state.Lockons[role]);
        }
        DiagnosticLog.Info($"Lockons reassignment {s}");
     }

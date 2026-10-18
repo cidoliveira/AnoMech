@@ -17,14 +17,11 @@ public sealed class MultiplayerSession
     public Dictionary<Guid, byte> Jobs { get; private set; } = new();
     public bool Started { get; set; }
 
-    // Indices into Game.Scenarios and that scenario's AiStrats/WaymarkPresets; -1 = the host
+    // Indices into Game.Catalog.Scenarios and that scenario's AiStrats/WaymarkPresets; -1 = the host
     // hasn't picked a scenario yet.
     public int ScenarioIndex { get; set; } = -1;
     public int SelectedAi { get; set; }
     public int SelectedWaymark { get; set; }
-
-    // Keyed by TankBusterCastInfo.Id; 0/missing = no mitigation planned for that cast.
-    public Dictionary<string, ushort> TankBusterPlan { get; private set; } = new();
 
     // Display lines from ScenarioSettingsSummary.
     public List<string> ScenarioSettings { get; set; } = new();
@@ -49,10 +46,6 @@ public sealed class MultiplayerSession
         ScenarioIndex = msg.ScenarioIndex;
         SelectedAi = msg.SelectedAi;
         SelectedWaymark = msg.SelectedWaymark;
-        TankBusterPlan = msg.TankBusterPlan
-            .Where(kv => !string.IsNullOrEmpty(kv.Key))
-            .Take(MaxScenarioSettingLines)
-            .ToDictionary(kv => NetGuard.Clean(kv.Key), kv => kv.Value);
         ScenarioSettings = NetGuard.Cap(msg.ScenarioSettings, MaxScenarioSettingLines).Select(NetGuard.Clean).ToList();
         ScenarioSettingsJson = msg.ScenarioSettingsJson is { Length: > 0 and <= MaxScenarioSettingsJson } json ? json : null;
     }
@@ -60,7 +53,7 @@ public sealed class MultiplayerSession
     public LobbyStateMessage ToMessage() => new(
         HostId, new Dictionary<PartyRole, Guid>(ClaimedBy), new Dictionary<Guid, string>(Names),
         new Dictionary<Guid, PeerBuildInfo>(Builds), new Dictionary<Guid, byte>(Jobs), Started, ScenarioIndex, SelectedAi, SelectedWaymark,
-        new Dictionary<string, ushort>(TankBusterPlan), new List<string>(ScenarioSettings), ScenarioSettingsJson);
+        new List<string>(ScenarioSettings), ScenarioSettingsJson);
 
     public PartyRole? RoleOf(Guid peerId) =>
         ClaimedBy.Where(kv => kv.Value == peerId).Select(kv => (PartyRole?)kv.Key).FirstOrDefault();

@@ -68,6 +68,9 @@ public class Configuration : IPluginConfiguration
     // EnableUserActions.
     public float CastInterruptThreshold { get; set; } = 0.5f;
 
+    // Survivable hits kill a human player whose mitigation is below the hit's threshold; off, they always survive. Gated by EnableUserActions.
+    public bool EnableTankMitigation { get; set; } = true;
+
     // Firewall opcode config — updated automatically by OpcodeUpdater on game version change.
     public uint[] ZoneDownOpcodes { get; set; } = [];
     public string ZoneFirewallGameVersion { get; set; } = "";
@@ -88,10 +91,6 @@ public class Configuration : IPluginConfiguration
 
     // Env scene forced for every phase; SplatoonCompat.SceneOverrideOff uses each phase's own.
     public int SplatoonSceneOverride { get; set; } = Integrations.Splatoon.SplatoonCompat.SceneOverrideOff;
-
-    // Under SplatoonCompat: fire-and-forget head markers and tethers go through the game's
-    // ActorControl handler (see Core/Native/ActorControlFunctions) so BossMod and NyaDraw see them.
-    public bool RouteMarkersAndTethers { get; set; } = true;
 
     // Under SplatoonCompat: move BossMod's fight module to where the scenario starts (see
     // Integrations/BossMod/BossModBridge).

@@ -110,7 +110,9 @@ public sealed class UmadP4KefkaSaysAi(UmadP4KefkaSaysAi.GazeLayout gazeLayout) :
                 return;
             }
             DiagnosticLog.Info($"[AccelerationBombDodge] wiggle firing at t={resolveTime - 0.6f:F2} (resolve at {resolveTime:F2}) from ({member.Position.X:F1},{member.Position.Z:F1}).");
-            member.MoveTo(member.Position + new Vector3(0.3f, 0f, 0f), speed: 0.4f);
+            var toDestination = (member.MoveDestination ?? member.Position) - member.Position;
+            var step = toDestination.Length() > 0.05f ? Vector3.Normalize(toDestination) : Vector3.UnitX;
+            member.MoveTo(member.Position + step * 0.3f, speed: 0.4f);
         });
     }
 
@@ -376,7 +378,7 @@ public sealed class UmadP4KefkaSaysAi(UmadP4KefkaSaysAi.GazeLayout gazeLayout) :
     //
     // Mirrors the hazard geometry the scenario resolves against (see
     // UmadP4KefkaSaysScenario.Run_Kefka_400040E5_1 / Run_Kefka_400040E6_1 and the
-    // shapes in CharacterFind), so "safe here" matches "DamageSolver won't hit me".
+    // shapes in CharacterFind), so "safe here" matches "the hit won't land on me".
 
     // Blizzard: 4 cones, apex at arena centre, facing the 4 inter-cardinals, 45°
     // half-angle. The two with (i + BlizzardOffset) even are real.

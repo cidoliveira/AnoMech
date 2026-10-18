@@ -40,10 +40,6 @@ internal sealed class SplatoonCompat : IDisposable
     public bool IsHoldingEncounter => combat.Owns;
     public byte? AppliedScene => combat.Owns ? wantedScene : null;
 
-    // The last SetTether byte. Server tethers carry 15, and Splatoon scripts ignore any tether
-    // that doesn't (OnTetherCreate's data5); the sim's own value was 1.
-    public static byte TetherParam => Plugin.Config.SplatoonCompat ? (byte)15 : (byte)1;
-
     public static bool IsSplatoonLoaded()
         => Plugin.PluginInterface.InstalledPlugins.Any(p => p.InternalName == SplatoonInternalName && p.IsLoaded);
 
@@ -61,7 +57,7 @@ internal sealed class SplatoonCompat : IDisposable
     public void Tick()
     {
         if (!combat.Owns) return;
-        if (!Plugin.Config.SplatoonCompat || !Plugin.GameInstance.World.Map.IsInInstance)
+        if (!Plugin.Config.SplatoonCompat || !Plugin.Game.World.Map.IsInInstance)
         {
             Release();
             return;

@@ -7,7 +7,6 @@
  
 Simulate FFXIV raid mechanics client-side for solo practice. Go to any Inn, open the plugin with `/anomech` and start practicing!
 
-
 Thanks to improvemnts by [WorstAquaPlayer](https://github.com/WorstAquaPlayer) plugin is quite stable now! No more 
 crashes after training session.
 
@@ -21,11 +20,6 @@ While simulating:
   * Ready checks will not pop.
  
 
-### Beta: Advanced Simulation Resolution
-
-The simulator now includes a beta feature that properly resolves most skills, triggers, and gauges during simulation. 
-As this feature is still in beta, some edge cases and less common interactions may not yet resolve correctly.
-
 
 ### Splatoon, BossMod and NyaDraw
 
@@ -34,10 +28,10 @@ for the simulated fight work inside a scenario, and BossMod (and BossMod Reborn)
 the sim's head markers and tethers. Toggle it under `/anomech config` →
 **Plugin compatibility** (on by default).
 
-Boss casts, action effects, head-marker and other actor VFX, tethers and statuses already
-reach Splatoon, because the sim plays them through the same game functions server packets use.
-While a scenario runs, AnoMech also sets the encounter state the firewall would otherwise
-block:
+Boss casts, action effects, head markers, tethers, statuses and arena map effects already
+reach these plugins, because the sim plays them through the same game functions and packet
+handlers the server's packets go through. While a scenario runs, AnoMech also sets the
+encounter state the firewall would otherwise block:
 
 * **Zone.** Dalamud only learns the zone from the server, so it would keep reporting the inn.
   AnoMech sets it to the simulated fight's territory on entry and back to the inn on leave, so
@@ -54,24 +48,16 @@ block:
 * **Phase scene.** Sets the scene that scripts check with `Controller.Scene` and that layout
   scene locks use: TOP P2 = 3, TOP P5 = 6, TOP P6 = 7, Dancing Mad P2 = 7, Dancing Mad P3 = 8. Other
   phases keep the zone's own value. Use **Scene override** to force a scene for them.
-* **Tethers.** Real tethers carry a value of 15 that many Splatoon scripts check (FRU, TOP P5
-  Delta, UCOB). The sim used 1, so those scripts ignored its tethers; it now sends 15.
-* **Map effects.** Arena map effects are sent through the game function itself, so
-  Splatoon's `OnMapEffect` fires no matter which plugin loaded first.
-* **Head markers and tethers as game events.** BossMod and NyaDraw read head markers and
-  tethers only from the game's ActorControl packet handler, which the sim never went through.
-  With **Send head markers and tethers as game events** on, timed head markers and all tethers
-  are played through that handler, so they show up like a server's. Markers a scenario removes
-  early keep the old path.
+* **BossMod's module.** BossMod's fight modules follow the fight from the pull, so a scenario
+  that starts mid-fight would leave them in an earlier phase. With **Move BossMod's module to
+  the scenario's start** on, AnoMech moves the module to the scenario's mechanic where one is
+  mapped (Dancing Mad P3). This also gives NyaDraw its BossMod AOEs.
 
 Known gaps:
 * The scene is only known for the phases above.
 * NPC chat lines (`OnMessage` with boss dialogue, BossMod/NyaDraw NPC yells) aren't sent.
   `OnDirectorUpdate` only sees the director updates the sim replays itself, such as Commence at
   zone load. It never sees a wipe, but the combat reset between pulls covers that.
-* The ActorControl parameter layout for markers and tethers follows BossMod's packet decoder and
-  hasn't been checked against a live capture; turn the option off if a marker or tether looks
-  wrong.
 * Scenarios start mid-fight, so layouts timed from the start of combat run from the start of
   the scenario.
 
@@ -79,8 +65,16 @@ Known gaps:
 
 See: https://github.com/anomek/MyDalamudPlugins
 
-## Currently implemented:
+## Beta: Advanced Simulation Resolution
+
+The simulator now includes a beta feature that properly resolves most skills, triggers, and gauges during simulation.
+As this feature is still in beta, some edge cases and less common interactions may not yet resolve correctly.
+
+
+## Currently implemented 
+All using default NA pf strats unless noted otherwise:
 - Dancing Mad (Ultimate)
+    - P1 Tele-trouncing _by [Evernow](https://github.com/Evernow)_
     - P2 Forsaken
       - NA
         - [Kroxy-Rinon 341 (Center/N Stacks) melee adjust](https://raidplan.io/plan/UATE__aDcw1-bgVv)
@@ -90,13 +84,34 @@ See: https://github.com/anomek/MyDalamudPlugins
         - [\[LPDU\] Buddies](https://raidplan.io/plan/142oXOZpPc_jh3dd)
         - [\[Old\] p3Z Buddy Meow](https://raidplan.io/plan/lZWqxfxvyhF9sp3Z)
         - [\[Old\] zP6 South adjust](https://raidplan.io/plan/rtc1FcuZFMuyBzP6)
-    - P3 Black Hole _old bh (DSA, single tethers, n/s stomps)_
-    - P4 Kefka Says _kefkabin_
+      - JP _by [altair9x](https://github.com/altair9x)_
+        - [Yan](https://yan-flash.com/ultimate/yosei-ranbu#ult-phase-2)
+    - P3 Limit Cut _by [Evernow](https://github.com/Evernow)_
+    - P3 Black Hole _old bh (single tethers, n/s stomps)_
+      - D>S>A
+      - S>D>A _by [Evernow](https://github.com/Evernow)_
+    - P4 Kefka Says
+      - kefkabin
+      - kefkabin, gazes: supports N / DPS S _by [Evernow](https://github.com/Evernow)_
+    - P5 Flood _by [Evernow](https://github.com/Evernow)_
     - P5 Exaflares _by [Wydox](https://github.com/Wydox)_
     - P5 Celestriad _by [RoarkGit](https://github.com/RoarkGit)_
     - P5 Forsaken Null _no ai or damage_
-- The Omega Protocol (Ultimate): _NA pf strats_
+- Futures Rewritten (Ultimate) _by [grayparser](https://github.com/grayparser)_
+    - P2 Diamond Dust 
+    - P2 Light Rampant
+    - P3 Ultimate Relativity
+    - P3 Apocalypse 
+    - P4 Darklit Dragonsong
+      - NA
+      - NA, you take Somber Dance
+    - P4 Crystallize Time 
+    - P5 Fulgent Blade
+    - P5 Paradise Regained 
+- The Omega Protocol (Ultimate)
     - P2 Party Synergy
+      - NA pf
+      - LPDU _by [Quantumlyy](https://github.com/Quantumlyy)_
     - P5 Delta
     - P5 Sigma
     - P5 Omega
@@ -125,22 +140,28 @@ See: https://github.com/anomek/MyDalamudPlugins
 
 
 ## Known issues
-* Minor visual and timing issues may occur
+* Visuals should closely match retail, but damage snapshot timings are best guesses
 * In scenarios for Top Omega Protocol (Ultimate):
   * Tether distance threshold are very rough estimations
-  * Line AOE from Optiocal Unit (eye) doesn't render
 * Not all skills will resolve properly
 
 #  Acknowledgments
 
 Thanks for contributors:
-* [WorstAquaPlayer](https://github.com/WorstAquaPlayer) - rewriting core & fixing crashes, scenarios for uwu
-* [Wydox](https://github.com/Wydox) - EU strats for Forsaken, UMAD Exaflares, core improvements
-* [RoarkGit](https://github.com/RoarkGit) - UMAD Celestriad, UCOB exas, win streaks
+* [WorstAquaPlayer](https://github.com/WorstAquaPlayer) - rewriting core & fixing crashes, extra scenarios
+* [Wydox](https://github.com/Wydox) - core improvements, extra scenarios and strategies
+* [Evernow](https://github.com/Evernow) - multiplayer (WIP), core improvements, extra scenarions and strategies
+* [RoarkGit](https://github.com/RoarkGit) - win streaks, extra scenarios
+* [grayparser](https://github.com/grayparser) - core improvements, extra scenarios
+* [altair9x](https://github.com/altair9x) - extra strategies
+* [Quantumlyy](https://github.com/Quantumlyy) - extra strategies
+* [Linqx](https://github.com/Linqx) - success/failure checkmarks
 
 AnoMech leans heavily on the work of other Dalamud plugins. Huge thanks to their authors!  
 Without them, the following would not be possible:
 
-* **Hyperborea** — solo duty arena loading.
-* **FFXIV-RaidsRewritten** — stunning the player on death and playing raid VFX.
-* **bossmod** — mechanics timings and positions.
+AnoMech's zone changes are built on **Hyperborea**, which served as the baseline for loading a solo duty arena.                                                                                                                                                                                   
+[Evernow](https://github.com/Evernow) has since improved that code and made it safer to use.                                                                                                                                                                                                      
+
+**FFXIV-RaidsRewritten** and **bossmod** were the initial inspiration for the project, though neither is part of the                                                                                                                                                                              
+codebase anymore.

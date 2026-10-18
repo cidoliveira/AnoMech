@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
+using AnoMech.Core.Native.Interfaces;
 using AnoMech.Integrations.Splatoon;
 
 namespace AnoMech.Windows;
@@ -16,10 +17,10 @@ public class ConfigWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(380, 420) * ImGuiHelpers.GlobalScale;
+        Size = new Vector2(380, 400) * ImGuiHelpers.GlobalScale;
         SizeCondition = ImGuiCond.Always;
 
-        configuration = plugin.Configuration;
+        configuration = Plugin.Config;
     }
 
     public void Dispose() { }
@@ -52,8 +53,8 @@ public class ConfigWindow : Window, IDisposable
         {
             configuration.EnableUserActions = userActions;
             configuration.Save();
-            if (userActions) Plugin.UserActions.Enable();
-            else Plugin.UserActions.Disable();
+            if (userActions) Natives.UserActions.Enable();
+            else Natives.UserActions.Disable();
         }
 
         if (configuration.EnableUserActions)
@@ -65,10 +66,19 @@ public class ConfigWindow : Window, IDisposable
                 configuration.CastInterruptThreshold = Math.Clamp(threshold, 0f, 5f);
                 configuration.Save();
             }
+
+            var tankMitigation = configuration.EnableTankMitigation;
+            if (ImGui.Checkbox("Require tank mitigation", ref tankMitigation))
+            {
+                configuration.EnableTankMitigation = tankMitigation;
+                configuration.Save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Some tankbusters (depending on scenario support) will check your mitigation.");
         }
 
         ImGui.Separator();
-        DrawSplatoonCompat();
+        DrawPluginCompat();
         ImGui.Separator();
 
         var logging = configuration.EnableEventLogging;
@@ -106,7 +116,7 @@ public class ConfigWindow : Window, IDisposable
 #endif
     }
 
-    private void DrawSplatoonCompat()
+    private void DrawPluginCompat()
     {
         var compat = configuration.SplatoonCompat;
         if (ImGui.Checkbox("Plugin compatibility (Splatoon, BossMod...)", ref compat))
@@ -116,9 +126,9 @@ public class ConfigWindow : Window, IDisposable
         }
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip(
-                "While a scenario runs, flags you as in combat and in duty and sets the fight's\n" +
-                "phase scene, so Splatoon layouts and scripts for the fight activate and reset\n" +
-                "between pulls. Also lets Splatoon see the sim's arena map effects.");
+                "While a scenario runs, sets the zone, flags you as in combat and in duty and sets\n" +
+                "the fight's phase scene, so Splatoon layouts and scripts for the fight activate\n" +
+                "and reset between pulls.");
 
         ImGui.SameLine();
         if (SplatoonCompat.IsSplatoonLoaded())
@@ -127,18 +137,6 @@ public class ConfigWindow : Window, IDisposable
             ImGui.TextDisabled("Splatoon not loaded");
 
         if (!configuration.SplatoonCompat) return;
-
-        var route = configuration.RouteMarkersAndTethers;
-        if (ImGui.Checkbox("Send head markers and tethers as game events", ref route))
-        {
-            configuration.RouteMarkersAndTethers = route;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip(
-                "Plays head markers and tethers through the game's own event handler, like the\n" +
-                "server does, so BossMod and NyaDraw see them. Turn off if a marker or tether\n" +
-                "looks wrong in a scenario.");
 
         var syncBossMod = configuration.SyncBossModModule;
         if (ImGui.Checkbox("Move BossMod's module to the scenario's start", ref syncBossMod))

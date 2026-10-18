@@ -3,15 +3,13 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Numerics;
 using AnoMech.Core.Game;
+using AnoMech.Core.SimObjects;
 
 namespace AnoMech.Scenarios.Uwu;
 
 public class UwuConstants
 {
-    public const byte Level = 70;
-    public const ushort ItemLevel = 375;
-
-    public static IReadOnlyList<Waymark> NaWaymarks =>
+    public static IReadOnlyList<Waymark> NaurWaymarks =>
     [
         new(WaymarkSlot.A, new Vector3(0, 0, -6.7f)),
         new(WaymarkSlot.B, new Vector3(6.7f, 0, 0)),
@@ -36,6 +34,20 @@ public class UwuConstants
         public const uint Dummy = 9020;
     }
 
+    public class BNpcLayoutId
+    {
+        public const uint Garuda = 0x701FBF;
+        public const uint Suparna = 0x70205B;
+        public const uint Chirada = 0x70205C;
+        public const uint RazorPlume = 0x701FC2;
+        public const uint Ifrit = 0x701FC8;
+        public const uint Titan = 0x701FCE;
+        public const uint BombBoulder = 0x701FD1;
+        public const uint GraniteGaol = 0x701FD3;
+        public const uint UltimaWeapon = 0x701FD7;
+        public const uint Dummy = 0x704D3F;
+    }
+
     public class BNpcNameId
     {
         public const uint Dummy = 108;
@@ -54,7 +66,10 @@ public class UwuConstants
     {
         public const uint Featherlance = 11075;
         public const uint GreatWhirlwind = 11073;
+        public const uint SuperCyclone1 = 11079;
         public const uint Mesohigh = 11081;
+        public const uint SuperCyclone2 = 11189;
+        public const uint SuperCyclone3 = 11190;
         public const uint MistralSongSuparnaChirada = 11083;
         public const uint WickedWheel = 11084;
         public const uint FeatherRain = 11085;
@@ -74,6 +89,7 @@ public class UwuConstants
         public const uint LandslideLine = 11120;
         public const uint LandslideTitan = 11121;
         public const uint UltimatePredation = 11126;
+        public const uint UltimaAttack = 11127;
         public const uint ViscousAetheroplasmUltima = 11129;
         public const uint ViscousAetheroplasmEffect = 11130;
         public const uint HomingLasers = 11131;
@@ -99,16 +115,17 @@ public class UwuConstants
         public const uint UltimateSuppression = 11597;
     }
 
-    public class ActionTimelineId
+    public static class TimelineId
     {
         public const ushort RazorPlume = 1412;
-        public const ushort WarpStart = 7737;
-        public const ushort WarpStart2 = 7738;
-        public const ushort WarpEnd = 7747;
     }
 
     public class StatusId
     {
+        public const ushort MistralSongVuln = SimOnlyStatus.First + 0;
+        public const ushort ViscousVuln = SimOnlyStatus.First + 1;
+        public const ushort SuperCycloneVuln = SimOnlyStatus.First + 2;
+
         public const ushort Fetters = 292;
         public const ushort InfernalFetters = 377;
         public const ushort ThermalLow = 1525;
@@ -134,19 +151,23 @@ public class UwuConstants
         public const ushort FlamingCrush = 117;
     }
 
+    public class KnockbackId
+    {
+        public const uint SuperCyclone = 123;
+    }
+
     public class Duration
     {
-        public const float RazorPlumeRotation = 17.95f;
-        public const float RazorPlumeBack = 1f;
+        public const float RazorPlumeCircling = 16.5f;
     }
 
     public class Geometry
     {
         public const float ArenaRadius = 19.4f;
+        public const float NpcKnockbackStopRadius = 20f;
         public const float WickedTornadoOuterRadius = 20; // 20 is the EffectRange in the Action sheet
 
         public static readonly float RazorPlumeRotation = float.DegreesToRadians(-450);
-        public static readonly float RazorPlumeBackDistance = 3.6f;
         public static readonly FrozenDictionary<DirectionEnum, float> LookAtCenterRotation;
         public static readonly FrozenDictionary<DirectionEnum, Placement> UltimaPlacements;
         public static readonly FrozenDictionary<DirectionEnum, Placement> GarudaPlacements;

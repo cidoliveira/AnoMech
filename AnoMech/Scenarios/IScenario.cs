@@ -23,22 +23,11 @@ public interface IScenario
     // from each strat's IScenarioAi.Group.
     IReadOnlyList<IScenarioAi> AiStrats { get; }
 
-    // Tankbusters the multiplayer host can pre-plan mitigation for (see TankMitigation).
-    IReadOnlyList<TankBusterCastInfo> TankBusters => [];
-
-    // Tanks spawn at this HP so TankMitigation's fixed numbers land against a real tank's
-    // pool; null = the generic doppel HP.
-    uint? TankMaxHealth => null;
-
     // How far into the phase's track the real fight is when this scenario starts.
     float BgmSecondsAtStart => 0f;
 
     // Where this scenario begins in BossMod's module for the fight; null leaves BossMod alone.
     AnoMech.Integrations.BossMod.BossModStart? BossModStart => null;
-
-    // Authored cleanup time on the event clock, used by sequential practice.
-    // Scenarios without a declared end cannot be included in a sequence.
-    float Duration => 0;
 
     void Run(SimWorld world, int? selectedAi);
     void Tick(float delta, float elapsed) { }
@@ -65,18 +54,19 @@ public interface IScenario
     IReadOnlyList<string> SettingsConflicts => [];
 
     // Deterministic instance-progress replay (native DirectorUpdate/AddEffect calls) with no
-    // host-only dependency, so Game.RunScenarioInternal schedules it for a peer too.
+    // host-only dependency, so ScenarioSession.Start schedules it for a peer too.
     void RunInstanceEvents(SimWorld world) { }
-    // Whether the scenario has reached its own natural end, for Game's mechanic-streak
-    // tracking. Default covers scenarios whose whole timeline lives on world.Events (the
-    // common case: nothing to override). A scenario that schedules its mechanic on a private
-    // EventScheduler instead (e.g. one kept immune to EventTimeScale for real-time precision)
-    // must override this to check that queue instead, since world.Events would otherwise
-    // look permanently empty from the first tick.
-    bool IsFinished(SimWorld world) => world.Events.IsEmpty;
 }
 
-public interface IScenarioSequence : IScenario
+public static class ScenarioExtensions
 {
-    IReadOnlyList<IScenario> Scenarios { get; }
+    // Menu label, e.g. "P5 Delta".
+    public static string DisplayName(this IScenario scenario)
+    {
+        var phase = scenario.Phase;
+        return string.IsNullOrEmpty(phase.Name) ? scenario.Name : $"{phase.Name} {scenario.Name}";
+    }
+
+    public static string FullName(this IScenario scenario)
+        => $"{scenario.Phase.Zone.Name} — {scenario.DisplayName()}";
 }

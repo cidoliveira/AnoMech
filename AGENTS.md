@@ -106,6 +106,10 @@ communicate that with user and try to verify first.
   ascending order, so the scenario reads as the fight's timeline. Avoid offset arithmetic and
   scheduling from inside handlers by default; exceptions are fine where they make the scenario
   simpler 
+- **Partway starts.** `IScenario.StartsAt` starts a run that far into the scenario's timeline:
+  what its Run schedules before then is skipped (t=0 setup aside) and the rest moves up. The
+  scenario re-adds, at absolute times past `StartsAt`, what the skipped part left behind
+  (statuses, positions, reveals). `UmadP3StompAMoleScenario` is the example.
 - **Boss attacks** are `EnemyAction`s. Take cast times and AoE shapes from the Action sheet rather
   than hardcoding them. Use literal coordinates for spawns and moves unless a position really
   changes from run to run.

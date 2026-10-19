@@ -130,7 +130,7 @@ public sealed class ScenarioSession
 #endif
         // The run's clock starts at 0, as EventScheduler.FromRunStart's offsets assume: a stay's
         // first run follows no End to have cleared it.
-        world.Events.Clear();
+        world.Events.BeginRun(Scenario.StartsAt);
         var phase = Scenario.Phase;
         var zone = phase.Zone;
         world.PlaceWaymarks(ResolveWaymarks(zone, run.SelectedWaymark));
@@ -156,7 +156,7 @@ public sealed class ScenarioSession
             {
                 zone.Run(world);
                 phase.Run(world);
-                Scenario.Run(world, run.SelectedAi);
+                world.Events.FromRunStart(() => Scenario.Run(world, run.SelectedAi));
             }
             catch (Exception e)
             {
@@ -166,7 +166,7 @@ public sealed class ScenarioSession
             if (Plugin.Config.EnableMechanicResultMarks) markHelper = world.SpawnEnemy(MarkHelper);
         }
         // Both host and peer: RunInstanceEvents carries no RNG/AI/damage-check dependency.
-        Scenario.RunInstanceEvents(world);
+        world.Events.FromRunStart(() => Scenario.RunInstanceEvents(world));
         instance.PlacePlayer();
         Natives.UserActions.OnScenarioStart();
         StartMusic();
@@ -177,7 +177,7 @@ public sealed class ScenarioSession
     {
         if (Mode == SessionMode.Peer) return;
         elapsed += deltaSeconds;
-        Scenario.Tick(deltaSeconds, elapsed);
+        Scenario.Tick(deltaSeconds, Scenario.StartsAt + elapsed);
         UpdateMechanicResult(deltaSeconds);
     }
 

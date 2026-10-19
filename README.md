@@ -51,7 +51,7 @@ encounter state the firewall would otherwise block:
 * **BossMod's module.** BossMod's fight modules follow the fight from the pull, so a scenario
   that starts mid-fight would leave them in an earlier phase. With **Move BossMod's module to
   the scenario's start** on, AnoMech moves the module to the scenario's mechanic where one is
-  mapped (Dancing Mad P3). This also gives NyaDraw its BossMod AOEs.
+  mapped (Dancing Mad P3 Black Hole and Stomp-a-Mole). This also gives NyaDraw its BossMod AOEs.
 
 Known gaps:
 * The scene is only known for the phases above.
@@ -90,6 +90,7 @@ All using default NA pf strats unless noted otherwise:
     - P3 Black Hole _old bh (single tethers, n/s stomps)_
       - D>S>A
       - S>D>A _by [Evernow](https://github.com/Evernow)_
+    - P3 Stomp-a-Mole _Black Hole from the end of its last wave, same strats_
     - P4 Kefka Says
       - kefkabin
       - kefkabin, gazes: supports N / DPS S _by [Evernow](https://github.com/Evernow)_

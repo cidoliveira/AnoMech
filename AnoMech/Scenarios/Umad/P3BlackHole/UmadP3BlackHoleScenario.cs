@@ -25,6 +25,17 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
     public string Name => "Black Hole";
     public IPhase Phase => UmadZone.P3;
 
+    // Where UmadP3StompAMoleScenario picks this timeline up: in the last wave's tail, whose final
+    // laser goes with its hole, with Kefka's fall and rise into the stomps left in.
+    internal const float StompAMoleStartsAt = 137.2f;
+
+    private readonly bool fromStompAMole;
+    public float StartsAt => fromStompAMole ? StompAMoleStartsAt : 0f;
+
+    public UmadP3BlackHoleScenario() : this(fromStompAMole: false) { }
+
+    internal UmadP3BlackHoleScenario(bool fromStompAMole) => this.fromStompAMole = fromStompAMole;
+
     // Boss Mod's UMADStates P3Earthquake: 0x200 activates the Earthquake raidwide, Nothingness and
     // Earth hints components, 0x210 waits for the Earthquake cast this scenario opens with.
     // UNVERIFIED in game; state ids from Boss Mod's source.
@@ -59,6 +70,8 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
     private const float EarthResistanceDownDuration = 1.960f;
 
     private int PrimodialCrustsToResolve;
+    // A run started past a wave never spawns its holes, so its window can't hurt anyone.
+    private readonly bool[] waveInPlay = new bool[4];
     private float CleanseCooldown;
     SimEnemy? CleanseHelper;
 
@@ -76,6 +89,7 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
             ((IScenarioAi<UmadP3BlackHoleState>)AiStrats[idx]).Run(state, world);
         
         PrimodialCrustsToResolve = 0;
+        Array.Clear(waveInPlay);
 
        
         BlackHolePositions = Enumerable.Range(0, 4).Select(GenerateBlackHolePositions).ToArray();
@@ -177,7 +191,7 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
             > 126.24f and <139.83f => 3,
             _ => -1
        };
-       if (wave != -1)
+       if (wave != -1 && waveInPlay[wave])
        {
            foreach (var bh in BlackHolePositions[wave])
            {
@@ -253,6 +267,11 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
             chaos_4000414D.Cast(state.ImplosionAttack, animationLock: 6.1f);
         });
         world.Events.Add(124.41f, () => chaos_4000414D?.Cast(UmadActions.AutoAttack, party.Get(PartyRole.MainTank)));
+        if (fromStompAMole)
+        {
+            world.Events.Add(137.30f, () => chaos_4000414D?.AddStatus(StatusId.EpicVillain));
+            world.Events.Add(137.30f, () => chaos_4000414D?.Follow(party.Get(PartyRole.MainTank)));
+        }
         world.Events.Add(141.47f, () => chaos_4000414D?.Cast(UmadActions.AutoAttack, party.Get(PartyRole.MainTank)));
         world.Events.Add(144.50f, () => chaos_4000414D?.Cast(UmadActions.AutoAttack, party.Get(PartyRole.MainTank)));
         world.Events.Add(147.09f, () => chaos_4000414D?.Cast(ActionId.KnockDown_Cast, animationLock: 3.1f));
@@ -313,6 +332,11 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
         world.Events.Add(113.38f, () => exdeath_4000414C?.Cast(UmadActions.WhiteHole));
         world.Events.Add(122.45f, () => exdeath_4000414C?.Cast(UmadActions.ExdeathAutoAttack, party.Get(PartyRole.OffTank)));
         world.Events.Add(125.48f, () => exdeath_4000414C?.Cast(UmadActions.ExdeathAutoAttack, party.Get(PartyRole.OffTank)));
+        if (fromStompAMole)
+        {
+            world.Events.Add(137.30f, () => exdeath_4000414C?.AddStatus(StatusId.FatedVillain));
+            world.Events.Add(137.30f, () => exdeath_4000414C?.Follow(party.Get(PartyRole.OffTank)));
+        }
         world.Events.Add(141.51f, () => exdeath_4000414C?.Cast(UmadActions.ExdeathAutoAttack, party.Get(PartyRole.OffTank)));
         world.Events.Add(143.61f, () => exdeath_4000414C?.Cast(ActionId.BlizzardIII_Cast, animationLock: 3.1f));
         world.Events.Add(150.66f, () => exdeath_4000414C?.Cast(UmadActions.ExdeathAutoAttack, party.Get(PartyRole.RegenHealer)));
@@ -377,7 +401,17 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
         world.Events.Add(130.18f, () => kefka_40004141?.PlayActionTimeline(ActionTimelineId.WarpEnd2));
         
         world.Events.Add(132.26f, () => kefka_40004141?.Cast(ActionId.LookUponMeAndDespair2, animationLock: 3.1f));
+        if (fromStompAMole)
+        {
+            world.Events.Add(137.30f, () => kefka_40004141?.AddStatus(StatusId.Max, stacks: (ushort)506, overrideStacks: true));
+            world.Events.Add(137.30f, () => kefka_40004141?.SetPosition(state.KefkaPosition[4].Apply(kefkaPos)));
+        }
         world.Events.Add(137.40f, () => kefka_40004141?.SetModelState((byte)0x07));
+        if (fromStompAMole)
+        {
+            // UNVERIFIED in game: the opening's own reveal, for a run that starts past it.
+            world.Events.Add(137.80f, () => kefka_40004141?.PlayActionTimeline(TimelineId.KefkaP3Show));
+        }
         world.Events.Add(139.41f, () => kefka_40004141?.Cast(ActionId.StandUp_Levitate, animationLock: 4.1f));
         world.Events.Add(140.22f, () => kefka_40004141?.SetModelState((byte)0x06));
         
@@ -575,6 +609,7 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
     {
         world.Events.Add(avoidStart, () =>
         {
+            waveInPlay[wave] = true;
             foreach (var bh in BlackHolePositions[wave])
                 world.Obstacles.Add(new CircleObstacle(new Vector2(bh.X, bh.Z), BlackHoleAvoidRadius));
         });

@@ -6,6 +6,7 @@ using AnoMech.Core.Native.Implementations.Interop;
 using AnoMech.Core.Native.Implementations.Pointers;
 using AnoMech.Core.Native.Interfaces;
 using AnoMech.Integrations.BossMod;
+using AnoMech.Integrations.Iinact;
 using AnoMech.Integrations.Splatoon;
 using AnoMech.Multiplayer;
 using AnoMech.Windows;
@@ -58,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static LogManager LogManager { get; private set; } = null!;
     internal static SplatoonCompat SplatoonCompat { get; private set; } = null!;
     internal static BossModBridge BossModBridge { get; } = new();
+    internal static IinactBridge IinactBridge { get; private set; } = null!;
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 #if DEBUG
@@ -78,6 +80,11 @@ public sealed class Plugin : IDalamudPlugin
             if (Config.EnableEventLogging) LogManager.Open();
 
             GameNatives.Install();
+            IinactBridge = new IinactBridge(IinactLog.FindSink,
+                id => DataManager.GetExcelSheet<TerritoryType>()?.GetRowOrDefault(id)?.PlaceName.ValueNullable?.Name.ExtractText() ?? "",
+                InstanceContentDirectorHelper.DirectorEventId);
+            // Right over the game's natives: whatever multiplayer installs later wraps the tap.
+            NetLogTap.Install(IinactBridge.Write, () => IinactBridge.Writing, InstanceContentDirectorHelper.DirectorEventId);
             opcodeUpdater = new OpcodeUpdater();
             SplatoonCompat = new SplatoonCompat();
             Game = new Game();
@@ -184,10 +191,13 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.RemoveAllWindows();
 
         TimelineDebug.Shutdown();
+        // Before the sim's teardown below, none of which is the fight's.
+        IinactBridge?.StopWriting();
         Multiplayer?.Dispose();
         Game?.Dispose();
         // After Game, whose teardown can still be mid-run: the pre-run conditions go back last.
         SplatoonCompat?.Dispose();
+        IinactBridge?.Dispose();
         Natives.Dispose();
         opcodeUpdater?.Dispose();
         LogManager?.Dispose();
@@ -219,8 +229,14 @@ public sealed class Plugin : IDalamudPlugin
         catch (Exception e) { DiagnosticLog.Warn($"[Plugin] Runs.Tick threw: {e}"); }
         try { Game.Tick(fw->FrameDeltaTime); }
         catch (Exception e) { DiagnosticLog.Warn($"[Plugin] Game.Tick threw: {e}"); }
-        try { SplatoonCompat.Tick(); }
+        try { SplatoonCompat.Tick(fw->FrameDeltaTime); }
         catch (Exception e) { DiagnosticLog.Warn($"[Plugin] SplatoonCompat.Tick threw: {e}"); }
+        try
+        {
+            var inSimStay = Config.SplatoonCompat && Config.IinactCompat && Game.World.Map.IsInInstance;
+            IinactBridge.Tick(fw->FrameDeltaTime, inSimStay, SplatoonCompat.CombatEngaged, Game.Zone?.TerritoryId ?? 0, ClientState.TerritoryType);
+        }
+        catch (Exception e) { DiagnosticLog.Warn($"[Plugin] IinactBridge.Tick threw: {e}"); }
         try { BossModBridge.Tick(fw->FrameDeltaTime); }
         catch (Exception e) { DiagnosticLog.Warn($"[Plugin] BossModBridge.Tick threw: {e}"); }
 #if DEBUG

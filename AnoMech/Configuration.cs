@@ -85,8 +85,7 @@ public class Configuration : IPluginConfiguration
     public bool SafeMode { get; set; } = true;
 
     // While a scenario runs, hold the encounter state Splatoon gates layouts and scripts on
-    // (see Integrations/Splatoon/SplatoonCompat) and let other plugins' map-effect hooks see the
-    // sim's arena changes.
+    // (see Integrations/Splatoon/SplatoonCompat).
     public bool SplatoonCompat { get; set; } = true;
 
     // Env scene forced for every phase; SplatoonCompat.SceneOverrideOff uses each phase's own.
@@ -95,6 +94,10 @@ public class Configuration : IPluginConfiguration
     // Under SplatoonCompat: move BossMod's fight module to where the scenario starts (see
     // Integrations/BossMod/BossModBridge).
     public bool SyncBossModModule { get; set; } = true;
+
+    // Under SplatoonCompat: write the sim's fight into IINACT's log stream for cactbot (see
+    // Integrations/Iinact/IinactBridge).
+    public bool IinactCompat { get; set; } = true;
 
     // The below exists just to make saving less cumbersome
     public void Save()

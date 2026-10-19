@@ -4,6 +4,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using AnoMech.Core.Native.Interfaces;
+using AnoMech.Integrations.Iinact;
 using AnoMech.Integrations.Splatoon;
 
 namespace AnoMech.Windows;
@@ -17,7 +18,7 @@ public class ConfigWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(380, 400) * ImGuiHelpers.GlobalScale;
+        Size = new Vector2(380, 450) * ImGuiHelpers.GlobalScale;
         SizeCondition = ImGuiCond.Always;
 
         configuration = Plugin.Config;
@@ -151,6 +152,25 @@ public class ConfigWindow : Window, IDisposable
                 "BossMod AOEs). This moves the module to the scenario's mechanic when one is mapped.");
         if (Plugin.BossModBridge.LastResult is { } bossModResult)
             ImGui.TextDisabled($"BossMod: {bossModResult}");
+
+        var iinact = configuration.IinactCompat;
+        if (ImGui.Checkbox("Send the sim to IINACT (cactbot)", ref iinact))
+        {
+            configuration.IinactCompat = iinact;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(
+                "Writes the sim's casts, hits, debuffs, head markers and tethers into IINACT's log\n" +
+                "stream, as a real pull's packets would be, so cactbot's triggers and callouts run on\n" +
+                "the sim. Nothing reaches IINACT's log file while you're in the sim.");
+        ImGui.SameLine();
+        if (IinactBridge.IsIinactLoaded())
+            ImGui.TextColored(new Vector4(0.4f, 0.9f, 0.4f, 1f), "IINACT loaded");
+        else
+            ImGui.TextDisabled("IINACT not loaded");
+        if (configuration.IinactCompat && Plugin.IinactBridge.LastResult is { } iinactResult)
+            ImGui.TextDisabled($"IINACT: {iinactResult}");
 
         var sceneOverride = configuration.SplatoonSceneOverride;
         ImGui.SetNextItemWidth(90 * ImGuiHelpers.GlobalScale);

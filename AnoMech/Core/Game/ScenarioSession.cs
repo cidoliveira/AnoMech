@@ -147,6 +147,7 @@ public sealed class ScenarioSession
         Plugin.SplatoonCompat?.OnScenarioStarted(phase);
         // A peer's BossMod follows its own client's actors like the host's does.
         Plugin.BossModBridge.OnScenarioStarted(Scenario.BossModStart);
+        Plugin.IinactBridge?.OnScenarioStarted(zone.TerritoryId);
         // zone.Run also creates the arena boundary PlacePlayer's out-of-arena check reads, so that
         // check no-ops for a peer.
         if (Mode != SessionMode.Peer)
@@ -238,7 +239,9 @@ public sealed class ScenarioSession
         world.Events.Clear();
         Plugin.SplatoonCompat?.OnScenarioStopped();
         Plugin.BossModBridge.OnScenarioStopped();
+        Plugin.IinactBridge?.OnScenarioStopping();
         world.Despawn();
+        Plugin.IinactBridge?.OnScenarioStopped();
 #if DEBUG
         AnoMech.Windows.DamageDebugWindow.Instance?.ResetFreeze();
 #endif

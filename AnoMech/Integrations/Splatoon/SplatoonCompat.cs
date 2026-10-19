@@ -38,6 +38,7 @@ internal sealed class SplatoonCompat : IDisposable
         [ConditionFlag.InCombat, .. HeldConditions.Select(h => h.Flag)];
 
     public bool IsHoldingEncounter => combat.Owns;
+    public bool CombatEngaged => combat.Engaged;
     public byte? AppliedScene => combat.Owns ? wantedScene : null;
 
     public static bool IsSplatoonLoaded()
@@ -54,7 +55,7 @@ internal sealed class SplatoonCompat : IDisposable
     public void OnScenarioStopped() => Release();
 
     // Every frame, after Game.Tick.
-    public void Tick()
+    public void Tick(float deltaSeconds)
     {
         if (!combat.Owns) return;
         if (!Plugin.Config.SplatoonCompat || !Plugin.Game.World.Map.IsInInstance)
@@ -64,7 +65,7 @@ internal sealed class SplatoonCompat : IDisposable
         }
 
         conditionsBeforeRun ??= OwnedConditions.ToDictionary(f => f, f => Plugin.Condition[f]);
-        if (combat.Tick() is { } inCombat)
+        if (combat.Tick(deltaSeconds) is { } inCombat)
             EncounterFlags.SetCondition(ConditionFlag.InCombat, inCombat);
         foreach (var (flag, value) in HeldConditions)
             EncounterFlags.SetCondition(flag, value);

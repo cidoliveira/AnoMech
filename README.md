@@ -37,8 +37,8 @@ encounter state the firewall would otherwise block:
   AnoMech sets it to the simulated fight's territory on entry and back to the inn on leave, so
   zone-locked layouts and scripts load.
 * **In combat.** Enables combat-only layouts and `Controller.CombatSeconds`, and resets
-  Splatoon's scripts between pulls. A restart drops combat for a few frames so Splatoon sees
-  the new pull.
+  Splatoon's scripts between pulls. A restart drops combat for 0.4 s first, so Splatoon (and
+  cactbot) see a new pull.
 * **In duty.** Enables duty-only layouts.
 * **Party.** The bots are already in the game's party list. While you're in a cross-world
   party, though, Splatoon reads the server's cross-world roster instead, so AnoMech hides
@@ -60,6 +60,35 @@ Known gaps:
   zone load. It never sees a wipe, but the combat reset between pulls covers that.
 * Scenarios start mid-fight, so layouts timed from the start of combat run from the start of
   the scenario.
+
+### Cactbot (IINACT)
+
+With [IINACT](https://github.com/marzent/IINACT) loaded, AnoMech also writes the sim's fight into
+IINACT's log stream, so cactbot's raidboss triggers and callouts run on it. Toggle **Send the sim
+to IINACT (cactbot)** under **Plugin compatibility** (on by default).
+
+* **The fight.** What a real pull's packets would have logged: casts and where they land, every
+  hit (AoEs that hit nobody included), cast cancels, deaths, statuses gained and lost, head
+  markers, tethers, targetability, model and animation changes, arena map effects and the
+  director's updates, with a commence line at each pull and a wipe line when it ends.
+* **Zone.** Cactbot learns it from the log, so AnoMech writes the sim's zone on entry and the inn
+  on leave.
+* **Combat, party, combatants.** IINACT reads these from game memory, which already shows the
+  sim: the in-combat flag above, the bots in the party list, the bosses in the object table.
+* **Disk.** Nothing reaches IINACT's log file while you're in the sim (IINACT's own switch for
+  PvP), so sim pulls never end up in a log you upload.
+* **Pull start.** Cactbot starts a pull afresh, dropping what it gathered, when it sees combat
+  begin, which can take up to 0.3 s. Each run's lines are held until then, so a run's first
+  moments reach cactbot a fraction of a second late rather than not at all.
+* **TOP.** Cactbot's TOP triggers offset every head marker by the pull's first one, so each TOP
+  run opens with that marker. Tanks hear "Tank Cleaves" once at the start because of it.
+
+Known gaps:
+* Cactbot timelines count from the pull; one started mid-fight lines up only where the timeline
+  allows a jump. Triggers don't depend on it.
+* Only IINACT: plain ACT reads the game's network traffic, which the sim never goes through.
+* IINACT has no API for this, so AnoMech reaches into its internals; an IINACT update could move
+  them. The settings show what happened (`IINACT: ...`).
 
 ## Installation
 

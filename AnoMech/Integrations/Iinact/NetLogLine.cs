@@ -102,6 +102,12 @@ internal static class NetLogLine
         uint animationTargetId)
         => Entry(264, Id(source.Id), Hex4(actionId), Id(globalEffectCounter), "1", Position(position), F3(heading), Id(animationTargetId));
 
+    public static NetLogEntry ActorSetPos(uint actorId, float heading, Vector3 position)
+        => Entry(271, Id(actorId), F4(heading), "00", "00", F4(position.X), F4(position.Z), F4(position.Y));
+
+    public static NetLogEntry SpawnNpcExtra(uint actorId, uint parentId, uint tetherId, byte animationState)
+        => Entry(272, Id(actorId), Id(parentId), Hex4(tetherId), Hex2(animationState));
+
     public static NetLogEntry ActorControlExtra(uint actorId, uint category, uint param1, uint param2, uint param3, uint param4)
         => Entry(273, Id(actorId), Hex4(category), Hex(param1), Hex(param2), Hex(param3), Hex(param4));
 
@@ -117,4 +123,5 @@ internal static class NetLogLine
     private static string Dec(uint value) => value.ToString(CultureInfo.InvariantCulture);
     private static string F2(float value) => value.ToString("F2", CultureInfo.InvariantCulture);
     private static string F3(float value) => value.ToString("F3", CultureInfo.InvariantCulture);
+    private static string F4(float value) => value.ToString("F4", CultureInfo.InvariantCulture);
 }

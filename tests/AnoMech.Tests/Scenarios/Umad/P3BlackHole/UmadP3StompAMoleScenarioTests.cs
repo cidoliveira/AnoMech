@@ -7,7 +7,6 @@ using static AnoMech.Tests.NegativeRun;
 using ActionId = AnoMech.Scenarios.Umad.UmadConstants.ActionId;
 using BNpcBaseId = AnoMech.Scenarios.Umad.UmadConstants.BNpcBaseId;
 using StatusId = AnoMech.Scenarios.Umad.UmadConstants.StatusId;
-using TimelineId = AnoMech.Scenarios.Umad.UmadConstants.TimelineId;
 
 namespace AnoMech.Tests;
 
@@ -54,8 +53,7 @@ public class UmadP3StompAMoleScenarioTests
             Assert.That(RowsOf(timeline, "move", chaos, before: 4f), Is.Not.Empty);
             Assert.That(RowsOf(timeline, "move", exdeath, before: 4f), Is.Not.Empty);
             Assert.That(RowsOf(timeline, "set_pos", kefka, before: 0.5f), Is.Not.Empty);
-            Assert.That(RowsOf(timeline, "ac", kefka, "0x197", before: 1f).Select(row => row["p"]),
-                Does.Contain($"0x{TimelineId.KefkaP3Show:X}"));
+            Assert.That(SpawnOf(timeline, BNpcBaseId.KefkaP3)["detail"], Does.Contain("visibility=Visible"));
         });
     }
 
@@ -109,8 +107,10 @@ public class UmadP3StompAMoleScenarioTests
         return (run, timeline!);
     }
 
-    private static string ActorOf(SimTimeline timeline, uint bnpcBase)
-        => timeline.Rows.Single(row => row["kind"] == "spawn" && row["id"] == bnpcBase.ToString())["actor"];
+    private static Dictionary<string, string> SpawnOf(SimTimeline timeline, uint bnpcBase)
+        => timeline.Rows.Single(row => row["kind"] == "spawn" && row["id"] == bnpcBase.ToString());
+
+    private static string ActorOf(SimTimeline timeline, uint bnpcBase) => SpawnOf(timeline, bnpcBase)["actor"];
 
     private static IEnumerable<Dictionary<string, string>> RowsOf(SimTimeline timeline, string kind, string actor,
         string? id = null, float before = float.MaxValue)

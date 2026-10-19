@@ -128,6 +128,16 @@ public class NetLogLineTests
             Is.EqualTo($"01|{Stamp}|553|The Dancing Plague|{Hash}"));
 
     [Test]
+    public void ActorSetPosHasTheHeadingThenThePosition()
+        => Assert.That(Line(NetLogLine.ActorSetPos(Kefka.Id, -2.3563f, World)),
+            Is.EqualTo($"271|{Stamp}|40001234|-2.3563|00|00|100.0000|90.0000|2.5000|{Hash}"));
+
+    [Test]
+    public void SpawnNpcExtraHasTheParentAndTether()
+        => Assert.That(Line(NetLogLine.SpawnNpcExtra(Kefka.Id, NetLogLine.NoTarget, 0xF6, 1)),
+            Is.EqualTo($"272|{Stamp}|40001234|E0000000|00F6|01|{Hash}"));
+
+    [Test]
     public void ActorControlExtraHasTheCategoryAndParams()
         => Assert.That(Line(NetLogLine.ActorControlExtra(Kefka.Id, 0x3F, 0x6, 0, 0, 0)),
             Is.EqualTo($"273|{Stamp}|40001234|003F|6|0|0|0|{Hash}"));

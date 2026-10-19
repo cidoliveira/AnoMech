@@ -1,4 +1,8 @@
 using AnoMech.Integrations.Iinact;
+using AnoMech.Scenarios.Top.P5Delta;
+using AnoMech.Scenarios.Umad.P1TeleTrouncing;
+using AnoMech.Scenarios.Umad.P3BlackHole;
+using KefkaBase = AnoMech.Scenarios.Umad.UmadConstants.BNpcBaseId;
 
 namespace AnoMech.Tests;
 
@@ -25,6 +29,7 @@ public class IinactBridgeTests
 
     private FakeSink sink = null!;
     private INetLogSink? found;
+    private readonly Dictionary<uint, NetLogActor> spawned = [];
     private readonly List<TimeSpan> slept = [];
     private IinactBridge bridge = null!;
 
@@ -34,7 +39,9 @@ public class IinactBridgeTests
         sink = new FakeSink();
         found = sink;
         slept.Clear();
-        bridge = new IinactBridge(() => (found, found is null ? "IINACT isn't loaded" : null), id => $"zone {id}", () => Instance, slept.Add);
+        spawned.Clear();
+        bridge = new IinactBridge(() => (found, found is null ? "IINACT isn't loaded" : null),
+            bnpcBase => spawned.TryGetValue(bnpcBase, out var boss) ? boss : null, id => $"zone {id}", () => Instance, slept.Add);
     }
 
     [TearDown]
@@ -101,7 +108,7 @@ public class IinactBridgeTests
     {
         Tick();
         sink.Written.Clear();
-        bridge.OnScenarioStarted(Umad);
+        bridge.OnScenarioStarted(new UmadP1TeleTrouncingScenario());
 
         bridge.Write(Cast);
         Tick(engaged: false, seconds: 1f);
@@ -116,16 +123,52 @@ public class IinactBridgeTests
     }
 
     [Test]
-    public void ATopRunOpensWithTheFightsFirstHeadMarker()
+    public void ATopRunSeedsItsPhaseThenTheFightsFirstHeadMarker()
     {
         EnterTop();
         sink.Written.Clear();
-        bridge.OnScenarioStarted(Top);
+        bridge.OnScenarioStarted(new TopP5DeltaScenario());
 
         bridge.Write(Marker);
         Tick(engaged: true, seconds: 1f);
 
-        Assert.That(Written, Is.EqualTo(new[] { "27|E0000000||0000|0000|0017|0000|0000|0000", "27|marker" }));
+        Assert.Multiple(() =>
+        {
+            Assert.That(sink.Written.Select(e => e.Type), Is.EqualTo(new ushort[] { 21, 27, 27 }));
+            Assert.That(sink.Written[0].Body.Split('|')[2], Is.EqualTo("7B7C"));
+            Assert.That(Written.Skip(1), Is.EqualTo(new[] { "27|E0000000||0000|0000|0017|0000|0000|0000", "27|marker" }));
+        });
+    }
+
+    [Test]
+    public void ADancingMadP3RunTellsCactbotItsPhaseAndWhichActorIsKefka()
+    {
+        spawned[KefkaBase.KefkaP3] = new NetLogActor(0x40001234, "Kefka");
+        Tick();
+        sink.Written.Clear();
+        bridge.OnScenarioStarted(new UmadP3StompAMoleScenario());
+
+        Tick(engaged: true, seconds: 1f);
+
+        Assert.That(Written, Is.EqualTo(new[]
+        {
+            "20|E0000000||C3F7||E0000000||0.00|0.000|0.000|0.000|0.000",
+            "20|40001234|Kefka|BAE5||40001234|Kefka|0.00|0.000|0.000|0.000|0.000",
+        }));
+    }
+
+    [Test]
+    public void ASeedWaitsForItsBossToArriveButNotForever()
+    {
+        Tick();
+        sink.Written.Clear();
+        bridge.OnScenarioStarted(new UmadP3StompAMoleScenario());
+
+        Tick(engaged: true, seconds: 1f);
+        Assert.That(sink.Written, Is.Empty);
+
+        Tick(engaged: true, seconds: 1.1f);
+        Assert.That(Written.Last(), Does.StartWith("20|E0000000|Kefka|BAE5|"));
     }
 
     [Test]
@@ -147,7 +190,7 @@ public class IinactBridgeTests
     {
         Tick();
         sink.Written.Clear();
-        bridge.OnScenarioStarted(Umad);
+        bridge.OnScenarioStarted(new UmadP1TeleTrouncingScenario());
         bridge.Write(Cast);
 
         bridge.OnScenarioStopping();
@@ -167,6 +210,19 @@ public class IinactBridgeTests
 
         Assert.That(bridge.Writing, Is.False);
         Assert.That(bridge.LastResult, Does.Contain("stopped taking lines"));
+    }
+
+    [Test]
+    public void ASinkThatRefusesWhileTheHeldLinesGoOutStopsCleanly()
+    {
+        Tick();
+        bridge.OnScenarioStarted(new UmadP1TeleTrouncingScenario());
+        bridge.Write(Cast);
+        bridge.Write(Marker);
+        sink.Refuses = true;
+
+        Assert.DoesNotThrow(() => Tick(engaged: true, seconds: 1f));
+        Assert.That(bridge.Writing, Is.False);
     }
 
     [Test]

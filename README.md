@@ -69,8 +69,13 @@ to IINACT (cactbot)** under **Plugin compatibility** (on by default).
 
 * **The fight.** What a real pull's packets would have logged: casts and where they land, every
   hit (AoEs that hit nobody included), cast cancels, deaths, statuses gained and lost, head
-  markers, tethers, targetability, model and animation changes, arena map effects and the
-  director's updates, with a commence line at each pull and a wipe line when it ends.
+  markers, tethers (and the tether an NPC spawns with), NPC teleports, targetability, model and
+  animation changes, arena map effects and the director's updates, with a commence line at each
+  pull and a wipe line when it ends.
+* **Phase.** Cactbot's trigger files learn the phase, and some bosses' ids, from the cast that
+  opens it, which a scenario starting mid-fight never plays. Each run first replays what the file
+  needs for the scenario's phase (TOP, FRU, Dancing Mad, UWU), with no source name where a callout
+  would react to it.
 * **Zone.** Cactbot learns it from the log, so AnoMech writes the sim's zone on entry and the inn
   on leave.
 * **Combat, party, combatants.** IINACT reads these from game memory, which already shows the
@@ -86,6 +91,8 @@ to IINACT (cactbot)** under **Plugin compatibility** (on by default).
 Known gaps:
 * Cactbot timelines count from the pull; one started mid-fight lines up only where the timeline
   allows a jump. Triggers don't depend on it.
+* A callout that counts earlier mechanics of its phase stays quiet in a scenario starting after
+  them: Stomp-a-Mole's Blizzard III puddle call counts Black Hole's lasers, for one.
 * Only IINACT: plain ACT reads the game's network traffic, which the sim never goes through.
 * IINACT has no API for this, so AnoMech reaches into its internals; an IINACT update could move
   them. The settings show what happened (`IINACT: ...`).

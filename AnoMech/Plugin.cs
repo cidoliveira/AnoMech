@@ -80,11 +80,12 @@ public sealed class Plugin : IDalamudPlugin
             if (Config.EnableEventLogging) LogManager.Open();
 
             GameNatives.Install();
-            IinactBridge = new IinactBridge(IinactLog.FindSink,
+            NetLogTap? netLogTap = null;
+            IinactBridge = new IinactBridge(IinactLog.FindSink, bnpcBase => netLogTap?.FindSpawned(bnpcBase),
                 id => DataManager.GetExcelSheet<TerritoryType>()?.GetRowOrDefault(id)?.PlaceName.ValueNullable?.Name.ExtractText() ?? "",
                 InstanceContentDirectorHelper.DirectorEventId);
             // Right over the game's natives: whatever multiplayer installs later wraps the tap.
-            NetLogTap.Install(IinactBridge.Write, () => IinactBridge.Writing, InstanceContentDirectorHelper.DirectorEventId);
+            netLogTap = NetLogTap.Install(IinactBridge.Write, () => IinactBridge.Writing, InstanceContentDirectorHelper.DirectorEventId);
             opcodeUpdater = new OpcodeUpdater();
             SplatoonCompat = new SplatoonCompat();
             Game = new Game();

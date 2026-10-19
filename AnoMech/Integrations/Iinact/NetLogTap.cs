@@ -47,6 +47,7 @@ internal sealed class NetLogTap
     private readonly Func<uint> instance;
     private readonly Dictionary<uint, TapChara> charas = [];
     private readonly TapChara localPlayer;
+    private int spawns;
     private bool warned;
 
     private NetLogTap(Action<NetLogEntry> write, Func<bool> active, Func<uint> instance)
@@ -96,6 +97,21 @@ internal sealed class NetLogTap
     private NetLogActor Actor(GameObjectId? id) => id is { } objectId ? Actor(objectId.ObjectId) : NetLogActor.None;
 
     private uint MaxHealthOf(uint entityId) => Proxy(entityId)?.MaxHealth ?? 0;
+
+    // Player and party ids start 1, NPCs' 4.
+    private static bool IsNpc(uint entityId) => entityId >> 28 == 4;
+
+    // The last NPC of this BNpcBase row the sim spawned and the game still has. A proxy reads its
+    // slot, so an entry whose slot a later spawn took names that spawn instead: it doesn't count.
+    public NetLogActor? FindSpawned(uint bnpcBaseId)
+    {
+        TapChara? latest = null;
+        foreach (var (entityId, chara) in charas)
+            if (chara.BNpcBaseId == bnpcBaseId && chara.Inner.Exists && chara.Inner.EntityId == entityId
+                && (latest is null || chara.SpawnOrder > latest.SpawnOrder))
+                latest = chara;
+        return latest?.Actor;
+    }
 
     // ── Lines ────────────────────────────────────────────────────────────────
 
@@ -170,6 +186,11 @@ internal sealed class NetLogTap
                 write(NetLogLine.HeadMarker(actor, args[0]));
                 break;
             case SetTetherCategory:
+                if (IsNpc(actor.Id) && !chara.Tethered)
+                {
+                    chara.Tethered = true;
+                    write(NetLogLine.SpawnNpcExtra(actor.Id, NoTarget, args[1], 0));
+                }
                 write(NetLogLine.Tether(actor, Actor(args[2]), args[1], args[3]));
                 break;
             case CancelCastCategory:
@@ -237,6 +258,12 @@ internal sealed class NetLogTap
         write(NetLogLine.ActorControl(instance(), command, data0, data1, data2, data3));
     }
 
+    private void Teleported(TapChara chara, Vector3 position, float rotation)
+    {
+        if (!Writes(chara) || !IsNpc(chara.Inner.EntityId)) return;
+        write(NetLogLine.ActorSetPos(chara.Inner.EntityId, MathF.IEEERemainder(rotation, MathF.Tau), position));
+    }
+
     private void MapEffect(uint flags, byte index)
     {
         if (!active()) return;
@@ -244,16 +271,23 @@ internal sealed class NetLogTap
     }
 
     private IBattleCharaProxy? SpawnNpc(EnemySpawnConfig config, Placement placement, out uint entityId)
-        => realCharas.SpawnBattleNpcFromPacket(config, placement, out entityId) is { } chara ? Track(chara, entityId) : null;
+        => realCharas.SpawnBattleNpcFromPacket(config, placement, out entityId) is { } chara ? Track(chara, entityId, config.BNpcBaseId) : null;
 
     private IBattleCharaProxy? SpawnDoppel(PartyMemberPreset preset, byte level, Placement placement, out uint entityId)
-        => realCharas.SpawnDoppel(preset, level, placement, out entityId) is { } chara ? Track(chara, entityId) : null;
+        => realCharas.SpawnDoppel(preset, level, placement, out entityId) is { } chara ? Track(chara, entityId, 0) : null;
 
-    private TapChara Track(IBattleCharaProxy chara, uint entityId)
+    private TapChara Track(IBattleCharaProxy chara, uint entityId, uint bnpcBaseId)
     {
-        var tapped = new TapChara(chara, this);
+        var tapped = new TapChara(chara, this) { SpawnedEntityId = entityId, BNpcBaseId = bnpcBaseId, SpawnOrder = ++spawns };
         charas[entityId] = tapped;
         return tapped;
+    }
+
+    // The proxy's own id is gone with the actor, and a later spawn may hold the same one.
+    private void Untrack(TapChara chara)
+    {
+        if (charas.TryGetValue(chara.SpawnedEntityId, out var current) && ReferenceEquals(current, chara))
+            charas.Remove(chara.SpawnedEntityId);
     }
 
     // ── The tapped natives ───────────────────────────────────────────────────
@@ -276,6 +310,10 @@ internal sealed class NetLogTap
     private sealed class TapChara(IBattleCharaProxy inner, NetLogTap tap) : IBattleCharaProxy
     {
         public IBattleCharaProxy Inner => inner;
+        public uint SpawnedEntityId { get; init; }
+        public uint BNpcBaseId { get; init; }
+        public int SpawnOrder { get; init; }
+        public bool Tethered { get; set; }
         public Dictionary<(ushort, uint), StatusSlot> Statuses { get; set; } = [];
         public NetLogActor Actor => new(inner.EntityId, inner.Name);
 
@@ -306,7 +344,12 @@ internal sealed class NetLogTap
         public string DescribeTimelineSlotIds() => inner.DescribeTimelineSlotIds();
         public string DescribeModelSlots() => inner.DescribeModelSlots();
 
-        public void SetPos(Vector3 position, float rotation) => inner.SetPos(position, rotation);
+        public void SetPos(Vector3 position, float rotation)
+        {
+            inner.SetPos(position, rotation);
+            tap.Safely(() => tap.Teleported(this, position, rotation));
+        }
+
         public void Move(Vector3 position, float rotation, ActorMoveFlags flags, float speed) => inner.Move(position, rotation, flags, speed);
         public void NpcKnockback(Vector3 position, float rotation, float durationSeconds) => inner.NpcKnockback(position, rotation, durationSeconds);
         public void ForcedFollow(uint? targetEntityId) => inner.ForcedFollow(targetEntityId);
@@ -343,7 +386,7 @@ internal sealed class NetLogTap
 
         public void Despawn()
         {
-            tap.charas.Remove(inner.EntityId);
+            tap.Untrack(this);
             inner.Despawn();
         }
     }

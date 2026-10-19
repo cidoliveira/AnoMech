@@ -363,7 +363,11 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
     {
         var kefkaPos = new Placement(new Vector3(0.000f, 0.000f, 0.000f), 0); 
         SimEnemy? kefka_40004141 = null;
-        world.Events.Add(0f, () => kefka_40004141 = world.SpawnEnemy(new EnemySpawnConfig(BNpcBaseId: BNpcBaseId.KefkaP3, NameId: BNpcNameId.Kefka, Level: 100, Targetable: false, EnemyList: EnemyListMode.Always, Visibility: SpawnVisibility.HiddenUntilShown, LayoutId: BNpcLayoutId.KefkaP3, Placement: new Placement(new Vector3(0.000f, 0.000f, 0.000f), 0.000f))));
+        // A run from Stomp-a-Mole skips the opening's reveal; played right after the spawn, the show
+        // timeline left Kefka hidden in game. That run spawns him shown.
+        world.Events.Add(0f, () => kefka_40004141 = world.SpawnEnemy(new EnemySpawnConfig(BNpcBaseId: BNpcBaseId.KefkaP3, NameId: BNpcNameId.Kefka, Level: 100, Targetable: false, EnemyList: EnemyListMode.Always,
+            Visibility: fromStompAMole ? SpawnVisibility.Visible : SpawnVisibility.HiddenUntilShown, LayoutId: BNpcLayoutId.KefkaP3,
+            Placement: new Placement(new Vector3(0.000f, 0.000f, 0.000f), 0.000f))));
         world.Events.Add(5.88f, () => kefka_40004141?.AddStatus(StatusId.Max, stacks: (ushort)506, overrideStacks: true));
         world.Events.Add(5.88f, () => kefka_40004141?.SetModelState((byte)0x05));
         world.Events.Add(5.88f, () => kefka_40004141?.SetPosition(kefkaPos));
@@ -407,11 +411,6 @@ public sealed class UmadP3BlackHoleScenario : IMultiplayerReplayable
             world.Events.Add(137.30f, () => kefka_40004141?.SetPosition(state.KefkaPosition[4].Apply(kefkaPos)));
         }
         world.Events.Add(137.40f, () => kefka_40004141?.SetModelState((byte)0x07));
-        if (fromStompAMole)
-        {
-            // UNVERIFIED in game: the opening's own reveal, for a run that starts past it.
-            world.Events.Add(137.80f, () => kefka_40004141?.PlayActionTimeline(TimelineId.KefkaP3Show));
-        }
         world.Events.Add(139.41f, () => kefka_40004141?.Cast(ActionId.StandUp_Levitate, animationLock: 4.1f));
         world.Events.Add(140.22f, () => kefka_40004141?.SetModelState((byte)0x06));
         

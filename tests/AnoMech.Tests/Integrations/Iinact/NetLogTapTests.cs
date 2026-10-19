@@ -116,6 +116,54 @@ public class NetLogTapTests
     }
 
     [Test]
+    public void AnNpcsTeleportIsActorSetPosButAPlayersIsNot()
+    {
+        var kefka = SpawnKefka();
+
+        kefka.SetPos(new Vector3(100f, 0f, 90f), 1.5708f);
+        Player.SetPos(Vector3.Zero, 0f);
+
+        Assert.That(lines, Has.Count.EqualTo(1));
+        Assert.That(Fields("271")[2..9], Is.EqualTo(new[] { Id(kefka.EntityId), "1.5708", "00", "00", "100.0000", "90.0000", "0.0000" }));
+    }
+
+    // Retail spawns a tethered NPC (Dancing Mad's black holes) with the tether already on it, which
+    // cactbot reads from SpawnNpcExtra; the sim tethers it after the spawn.
+    [Test]
+    public void AnNpcsFirstTetherIsAlsoTheTetherItSpawnedWith()
+    {
+        var kefka = SpawnKefka();
+
+        kefka.ActorControl(0x23, 0, 0xF6, Player.EntityId, 15);
+        kefka.ActorControl(0x23, 0, 0xF6, Player.EntityId, 15);
+        Player.ActorControl(0x23, 0, 0xF6, kefka.EntityId, 15);
+
+        Assert.That(Types, Is.EqualTo(new[] { "272", "35", "35", "35" }));
+        Assert.That(Fields("272")[2..6], Is.EqualTo(new[] { Id(kefka.EntityId), "E0000000", "00F6", "00" }));
+    }
+
+    [Test]
+    public void ASpawnedNpcIsFoundByItsBaseUntilItDespawns()
+    {
+        var kefka = SpawnKefka();
+
+        Assert.That(tap.FindSpawned(BNpcBaseId.KefkaP3), Is.EqualTo(new NetLogActor(kefka.EntityId, kefka.Name)));
+        kefka.Despawn();
+        Assert.That(tap.FindSpawned(BNpcBaseId.KefkaP3), Is.Null);
+    }
+
+    [Test]
+    public void OfTwoNpcsOfOneBaseTheLaterIsFoundUntilItGoes()
+    {
+        var first = SpawnKefka();
+        var second = SpawnKefka();
+
+        Assert.That(tap.FindSpawned(BNpcBaseId.KefkaP3)?.Id, Is.EqualTo(second.EntityId));
+        second.Despawn();
+        Assert.That(tap.FindSpawned(BNpcBaseId.KefkaP3)?.Id, Is.EqualTo(first.EntityId));
+    }
+
+    [Test]
     public void ModelStatesAreActorControlExtraButWeaponDrawsAreNot()
     {
         var kefka = SpawnKefka();

@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using AnoMech.Core;
+using AnoMech.Scenarios;
 
 namespace AnoMech.Integrations.Iinact;
 
@@ -18,20 +20,18 @@ internal sealed class IinactBridge : IDisposable
     private const uint WipeCommand = 0x4000000F;
 
     // cactbot starts a pull afresh, dropping everything it gathered, when it sees combat begin: up
-    // to a 300 ms poll after the condition rises with the game unfocused. A run's lines wait that long.
+    // to a 300 ms poll after the condition rises with the game unfocused. A run's lines wait that
+    // long, and for the bosses its seeds name to arrive, though not past MaxHoldSeconds.
     private const float CactbotPollSeconds = 0.4f;
+    private const float MaxHoldSeconds = 2f;
 
     // IINACT's log thread checks the log file switch per line as it drains its queue, every 50 ms
     // when idle: the switch goes back only once the stay's last lines are through.
     private const float RestoreDelaySeconds = 2f;
     private const double UnloadDrainSeconds = 0.25;
 
-    // cactbot's TOP triggers take the first head marker of a pull for the fight's first, 0x0017,
-    // and offset every later one by the difference, so a run starting mid-fight sends that marker
-    // first. On no one: TOP's tank trigger still calls it once, at the start.
-    private static readonly Dictionary<uint, uint> FirstHeadMarkers = new() { [1122] = 0x0017 };
-
     private readonly Func<(INetLogSink? Sink, string? Missing)> findSink;
+    private readonly Func<uint, NetLogActor?> findSpawned;
     private readonly Func<uint, string> territoryName;
     private readonly Func<uint> instance;
     private readonly Action<TimeSpan> sleep;
@@ -45,13 +45,15 @@ internal sealed class IinactBridge : IDisposable
     private bool muted;
     private bool holding;
     private float engagedFor;
-    private uint? firstHeadMarker;
+    private IReadOnlyList<CactbotSeed> seeds = [];
     private readonly List<NetLogEntry> held = [];
 
-    public IinactBridge(Func<(INetLogSink? Sink, string? Missing)> findSink, Func<uint, string> territoryName, Func<uint> instance,
-        Action<TimeSpan>? sleep = null)
+    // findSpawned: the boss of a BNpcBase row the sim has spawned, for the seeds that carry its id.
+    public IinactBridge(Func<(INetLogSink? Sink, string? Missing)> findSink, Func<uint, NetLogActor?> findSpawned,
+        Func<uint, string> territoryName, Func<uint> instance, Action<TimeSpan>? sleep = null)
     {
         this.findSink = findSink;
+        this.findSpawned = findSpawned;
         this.territoryName = territoryName;
         this.instance = instance;
         this.sleep = sleep ?? Thread.Sleep;
@@ -69,7 +71,8 @@ internal sealed class IinactBridge : IDisposable
     {
         if (inSimStay && !inStay) BeginStay(simTerritory);
         else if (!inSimStay && inStay) EndStay(clientTerritory);
-        if (holding && combatEngaged && (engagedFor += deltaSeconds) >= CactbotPollSeconds) Release();
+        if (holding && combatEngaged && (engagedFor += deltaSeconds) >= CactbotPollSeconds
+            && (engagedFor >= MaxHoldSeconds || SeedBossesHaveArrived())) Release();
         if (restoreIn > 0f && (restoreIn -= deltaSeconds) <= 0f) RestoreDisk();
     }
 
@@ -81,13 +84,13 @@ internal sealed class IinactBridge : IDisposable
         else Send(entry);
     }
 
-    public void OnScenarioStarted(uint territory)
+    public void OnScenarioStarted(IScenario scenario)
     {
         if (!Writing) return;
         held.Clear();
         holding = true;
         engagedFor = 0f;
-        firstHeadMarker = FirstHeadMarkers.TryGetValue(territory, out var marker) ? marker : null;
+        seeds = CactbotSeeds.For(scenario);
     }
 
     // Before the run's teardown, whose despawns and cleared statuses aren't the fight's.
@@ -159,12 +162,32 @@ internal sealed class IinactBridge : IDisposable
         restoreIn = RestoreDelaySeconds;
     }
 
+    private bool SeedBossesHaveArrived() => seeds.All(seed => seed.SourceBNpcBase == 0 || findSpawned(seed.SourceBNpcBase) is not null);
+
+    // A refused line stops the stay's writing, so the rest isn't tried.
     private void Release()
     {
         holding = false;
-        if (firstHeadMarker is { } marker) Send(NetLogLine.HeadMarker(NetLogActor.None, marker));
-        foreach (var entry in held) Send(entry);
+        var lines = seeds.Select(Line).Concat(held).ToList();
         held.Clear();
+        foreach (var line in lines)
+        {
+            if (!Writing) break;
+            Send(line);
+        }
+    }
+
+    private NetLogEntry Line(CactbotSeed seed)
+    {
+        var id = seed.SourceBNpcBase != 0 && findSpawned(seed.SourceBNpcBase) is { } boss ? boss.Id : NetLogLine.NoTarget;
+        var source = new NetLogActor(id, seed.SourceName);
+        return seed.Type switch
+        {
+            CactbotSeed.Kind.StartsUsing => NetLogLine.StartsUsing(source, seed.Id, "", source, 0f, Vector3.Zero, 0f),
+            CactbotSeed.Kind.Ability => NetLogLine.Ability(source, seed.Id, "", NetLogHit.Nobody, 0, 0, (0, 0, 0, 0), Vector3.Zero, 0f, 0,
+                seed.Id, 0f, 0),
+            _ => NetLogLine.HeadMarker(NetLogActor.None, seed.Id),
+        };
     }
 
     private void Send(NetLogEntry entry)

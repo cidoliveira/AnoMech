@@ -21,7 +21,10 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 sed -i -E "s|<Version>[^<]*</Version>|<Version>${version}</Version>|" AnoMech/AnoMech.csproj
-if [ -n "$(git status --porcelain)" ]; then
+# sed rewrites the line endings even when the version is already set; only a real change commits.
+if git diff --quiet --ignore-cr-at-eol -- AnoMech/AnoMech.csproj; then
+    git checkout -q -- AnoMech/AnoMech.csproj
+else
     git commit -q -am "chore: release Lazarek ${version}"
 fi
 

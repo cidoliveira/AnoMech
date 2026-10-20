@@ -107,22 +107,8 @@ public sealed class UmadP4KefkaSaysScenario : IMultiplayerReplayable
             .Select(_ => world.SpawnEnemy(new EnemySpawnConfig(BNpcBaseId: BNpcBaseId.KefkaHelper, NameId: BNpcNameId.NeoExdeath, Level: 1, Targetable: false, EnemyList: EnemyListMode.Never, Visibility: SpawnVisibility.InvisibleHelper, Placement: new Placement(new Vector3(0f, 0f, 0f), 0f)))!)
             .ToArray();
 
-        ushort[] debuffs = [StatusId.AccelerationBomb, StatusId.AccelerationBomb, StatusId.ForkedLightning, StatusId.CompressedWater];
-        
-        float d = state.Wave1First ? 51f : 76f;
-        float[] durationw1 = [51f, 76f, d, d];
-        world.Events.Add(20.36f, () => state.Wave1.ForEach((i, c) => c.AddStatus(debuffs[i%4], durationw1[i%4])));
-        world.Events.Add(20.36f, () => state.Wave1.Get(0)?.AddStatus(StatusId.CursedShriek, 60f));
-        world.Events.Add(20.36f, () => state.Wave1.Get(4)?.AddStatus(StatusId.CursedShriek, 60f));
-        
         world.Events.Add(27.28f, () => party.ForEachActive(c => c.AddStatus(state.ChaosMysteries[0].Cast.Status, state.ChaosMysteries[0].Cast.DurationFirst)));
-        
-        d = state.Wave1First ? 61f : 36f;
-        float[] durationw2 = [61f, 36f, d, d];
-        world.Events.Add(35.28f, () => state.Wave2.ForEach((i, c) => c.AddStatus(debuffs[i%4], durationw2[i%4])));
-        world.Events.Add(35.28f, () => state.Wave2.Get(0)?.AddStatus(StatusId.CursedShriek, 69f));
-        world.Events.Add(35.28f, () => state.Wave2.Get(4)?.AddStatus(StatusId.CursedShriek, 69f));
-        
+
         world.Events.Add(40.99f, () => party.ForEachActive(c => c.AddStatus(state.ChaosMysteries[1].Cast.Status, state.ChaosMysteries[1].Cast.DurationSecond)));
         
         ushort[] debuffsw3 = [StatusId.BeyondDeath, StatusId.AllaganField];
@@ -143,22 +129,44 @@ public sealed class UmadP4KefkaSaysScenario : IMultiplayerReplayable
         world.Events.Add(66.64f, () => party.ForEachActive(c => c.RemoveStatus(StatusId.BlackWound)));
     }
 
+    private static readonly ushort[] WaveDebuffs = [StatusId.AccelerationBomb, StatusId.AccelerationBomb, StatusId.ForkedLightning, StatusId.CompressedWater];
+
+    // A wave's debuffs go out right behind its Grand Cross: readers on the client (Splatoon's Kefka
+    // Says reminder) tell whether they lie from the last action Neo Exdeath or Chaos landed, which a
+    // frame sooner is the previous tell's.
+    private void GiveWave1Debuffs()
+    {
+        var elements = state.Wave1First ? 51f : 76f;
+        GiveWaveDebuffs(state.Wave1, [51f, 76f, elements, elements], cursedShriek: 60f);
+    }
+
+    private void GiveWave2Debuffs()
+    {
+        var elements = state.Wave1First ? 61f : 36f;
+        GiveWaveDebuffs(state.Wave2, [61f, 36f, elements, elements], cursedShriek: 69f);
+    }
+
+    private static void GiveWaveDebuffs(RoleList wave, float[] durations, float cursedShriek)
+    {
+        wave.ForEach((i, c) => c.AddStatus(WaveDebuffs[i % 4], durations[i % 4]));
+        wave.Get(0)?.AddStatus(StatusId.CursedShriek, cursedShriek);
+        wave.Get(4)?.AddStatus(StatusId.CursedShriek, cursedShriek);
+    }
+
     private void Run_AccelerationBomb()
     {
         // Acceleration Bomb is a "don't move" debuff, but Kefka Says: that wave's lie can flip it
-        // to "must move". At detonation the local player dies if they did the wrong thing. The
-        // player's bomb is from whichever wave tagged their role at an AccelerationBomb slot
-        // (debuffs[0]/[1]); Wave2 (35.28) re-stamps over Wave1 (20.36), so Wave2 wins. Each bomb's
-        // lie is its source wave's truth (Wave1 -> Wave1True, Wave2 -> Wave2True). Times mirror
-        // Run_OtherDebuffs (apply + duration).
+        // to "must move". At detonation the local player dies if they did the wrong thing. Each
+        // player carries one wave's bomb, which goes off its duration after that wave's Grand Cross
+        // lands (20.37, 35.30); its lie is that wave's.
         bombHelper = world.SpawnEnemy(new EnemySpawnConfig(BNpcBaseId: BNpcBaseId.KefkaHelper, NameId: BNpcNameId.Kefka, Level: 1, Targetable: false, EnemyList: EnemyListMode.Never, Visibility: SpawnVisibility.InvisibleHelper, Placement: new Placement(new Vector3(0f, 0f, 0f), 0f)));
         int w1 = Array.IndexOf(state.Wave1.List, party.PlayerRole) % 4;
         int w2 = Array.IndexOf(state.Wave2.List, party.PlayerRole) % 4;
 
-        if (w2 == 0)      world.Events.Add(96.28f, () => ResolveAccelerationBomb(state.Wave2True)); // 35.28+61
-        else if (w2 == 1) world.Events.Add(71.28f, () => ResolveAccelerationBomb(state.Wave2True)); // 35.28+36
-        else if (w1 == 0) world.Events.Add(71.36f, () => ResolveAccelerationBomb(state.Wave1True)); // 20.36+51
-        else if (w1 == 1) world.Events.Add(96.36f, () => ResolveAccelerationBomb(state.Wave1True)); // 20.36+76
+        if (w2 == 0)      world.Events.Add(96.30f, () => ResolveAccelerationBomb(state.Wave2True)); // 35.30+61
+        else if (w2 == 1) world.Events.Add(71.30f, () => ResolveAccelerationBomb(state.Wave2True)); // 35.30+36
+        else if (w1 == 0) world.Events.Add(71.37f, () => ResolveAccelerationBomb(state.Wave1True)); // 20.37+51
+        else if (w1 == 1) world.Events.Add(96.37f, () => ResolveAccelerationBomb(state.Wave1True)); // 20.37+76
     }
 
     private void ResolveAccelerationBomb(bool real)
@@ -253,10 +261,10 @@ public sealed class UmadP4KefkaSaysScenario : IMultiplayerReplayable
         world.Events.Add(6.46f, () => neo_Exdeath_400041A4?.PlayActionTimeline(TimelineId.NeoExdeathShow));
         
         world.Events.Add(11.28f, () => neo_Exdeath_400041A4?.AddStatus(StatusId.KefkaLiesVfx, stacks: state.Wave1TrueVal, overrideStacks: true));
-        world.Events.Add(11.37f, () => neo_Exdeath_400041A4?.Cast(UmadActions.GrandCross));
+        world.Events.Add(11.37f, () => neo_Exdeath_400041A4?.Cast(UmadActions.GrandCross).AfterRelease(GiveWave1Debuffs));
         world.Events.Add(21.82f, () => neo_Exdeath_400041A4?.RemoveStatus(StatusId.KefkaLiesVfx));
         world.Events.Add(26.21f, () => neo_Exdeath_400041A4?.AddStatus(StatusId.KefkaLiesVfx, stacks: state.Wave2TrueVal, overrideStacks: true));
-        world.Events.Add(26.30f, () => neo_Exdeath_400041A4?.Cast(UmadActions.GrandCross));
+        world.Events.Add(26.30f, () => neo_Exdeath_400041A4?.Cast(UmadActions.GrandCross).AfterRelease(GiveWave2Debuffs));
         world.Events.Add(36.81f, () => neo_Exdeath_400041A4?.RemoveStatus(StatusId.KefkaLiesVfx));
         world.Events.Add(41.17f, () => neo_Exdeath_400041A4?.AddStatus(StatusId.KefkaLiesVfx, stacks: state.Wave3TrueVal, overrideStacks: true));
         world.Events.Add(41.26f, () => neo_Exdeath_400041A4?.Cast(UmadActions.GrandCross));
@@ -281,7 +289,9 @@ public sealed class UmadP4KefkaSaysScenario : IMultiplayerReplayable
         
         world.Events.Add(16.42f, () => chaos_400041A5?.AddStatus(StatusId.KefkaLiesVfx, stacks: state.ChaosMysteries[0].StatusValue, overrideStacks: true));
         world.Events.Add(16.51f, () => chaos_400041A5?.Cast(state.ChaosMysteries[0].Cast.Action, animationLock: 3.0f));
-        world.Events.Add(31.35f, () => chaos_400041A5?.RemoveStatus(StatusId.KefkaLiesVfx));
+        // Off a beat before the next tell, so that one reaches the client as a new status: swapped
+        // within one tick it would go out as a refresh of the old (SimCharacter.FlushStatusList).
+        world.Events.Add(31.25f, () => chaos_400041A5?.RemoveStatus(StatusId.KefkaLiesVfx));
         world.Events.Add(31.35f, () => chaos_400041A5?.AddStatus(StatusId.KefkaLiesVfx, stacks: state.ChaosMysteries[1].StatusValue, overrideStacks: true));
         world.Events.Add(31.43f, () => chaos_400041A5?.Cast(state.ChaosMysteries[1].Cast.Action, animationLock: 3.0f));
         

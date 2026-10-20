@@ -17,7 +17,7 @@ namespace AnoMech.Tests;
 //   62.90  Edge of Death down x=0. Beyond Death on MT RH M1 R, east at (7.6,1) under the Black
 //          Antilight; Allagan Field on OT SH M2 C, west at (-8,0) under the White. 66.34 an
 //          uncleansed Beyond Death kills.
-//   71.28  C's Acceleration Bomb (lying); 71.36 MT's (real).
+//   71.30  C's Acceleration Bomb (lying); 71.37 MT's (real).
 //   71.38  Wave 1 (true): Death Wave on SH stacked N (0,-12) with MT OT, Death Bolt on RH alone
 //          W (-12,0); Wave on C stacked S (0,12) with M1 M2, Bolt on R alone E (12,0).
 //   80.49  Death Shriek (true, look away) from MT (2.9,-1.1) and M1 (-1.1,2.9); the rest line up
@@ -159,7 +159,7 @@ public class UmadP4KefkaSaysScenarioTests
             .ShouldKill(marker, solo, otherSolo);
 
     // Wave 2 lies, so MT's Bolt is the one that needs three. A bot carries the stack marker: a
-    // player SH standing on the solo spot dies first to their own lying Acceleration Bomb at 71.28.
+    // player SH standing on the solo spot dies first to their own lying Acceleration Bomb at 71.30.
     [TestCase(70.9f, ShieldHealer, -12f, 0f, ActionId.DeathWave, RegenHealer)]
     [TestCase(96.0f, MainTank, -12.2f, 1.1f, ActionId.DeathBolt_Lie, OffTank)]
     public void StackMarkerOnSoloSpotKillsBoth(float at, PartyRole stackMarker, float x, float z, uint marker, PartyRole solo)

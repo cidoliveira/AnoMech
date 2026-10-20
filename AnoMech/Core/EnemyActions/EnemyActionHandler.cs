@@ -73,6 +73,7 @@ internal sealed class EnemyActionHandler(SimCharacter caster, SimCast cast, SimW
             if (handle.IsCancelled) return;
             if (casting == handle) casting = null;
             Release(action, target, location, castTarget, animationVariation, delivery);
+            handle.Released();
         });
         return handle;
     }

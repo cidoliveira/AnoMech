@@ -1,4 +1,7 @@
 using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using AnoMech.Core;
 using AnoMech.Core.Game;
 using AnoMech.Core.Native.Implementations;
@@ -21,7 +24,7 @@ using CSFramework = FFXIVClientStructs.FFXIV.Client.System.Framework.Framework;
 
 namespace AnoMech;
 
-public sealed class Plugin : IDalamudPlugin
+public sealed class Plugin : IAsyncDalamudPlugin
 {
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
@@ -62,6 +65,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static IinactBridge IinactBridge { get; private set; } = null!;
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
+    private FailureBanner? FailureBanner { get; init; }
 #if DEBUG
     private DamageDebugWindow DamageDebugWindow { get; init; }
 #endif
@@ -100,6 +104,8 @@ public sealed class Plugin : IDalamudPlugin
             windowSystem.AddWindow(MainWindow);
             windowSystem.AddWindow(MainWindow.ScenarioPanel);
             windowSystem.AddWindow(MainWindow.PartyPanel);
+            FailureBanner = new FailureBanner();
+            windowSystem.AddWindow(FailureBanner);
 #if DEBUG
             DamageDebugWindow = new DamageDebugWindow(this);
             windowSystem.AddWindow(DamageDebugWindow);
@@ -158,9 +164,49 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    public Task LoadAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    // Dalamud keeps this plugin's services and hooks until this completes, so an unload during a
+    // stay leaves it as the Leave button does and frames tick on until the guarded lift is done.
+    public async ValueTask DisposeAsync()
+    {
+        var since = Stopwatch.GetTimestamp();
+        try
+        {
+            while (!await Framework.RunOnFrameworkThread(() => DisposeOnceOutOfStay(since)))
+                await Framework.DelayTicks(1);
+        }
+        catch (OperationCanceledException)
+        {
+            // The game began closing mid-wait.
+            await Framework.RunOnFrameworkThread(Dispose);
+        }
+    }
+
+    // Leaving and the check share one callback, so no tick can start another stay in between.
+    // The lift dies by itself well inside the timeout when it can't verify the inn.
+    private bool DisposeOnceOutOfStay(long since)
+    {
+        if (ZoneControl.Current is { } zone && !Framework.IsFrameworkUnloading
+            && Stopwatch.GetElapsedTime(since) < UnloadLiftTimeout)
+        {
+            if (zone.IsActive)
+            {
+                Log.Information("[Plugin] Unloaded during a stay -- leaving it before teardown.");
+                Game?.LeaveNow();
+                zone.Revert();
+            }
+            if (zone.GuardArmed) return false;
+        }
+        Dispose();
+        return true;
+    }
+
+    private static readonly TimeSpan UnloadLiftTimeout = TimeSpan.FromSeconds(10);
+
     // Null-tolerant throughout: the constructor's failure path calls this on a half-built
     // instance, where anything past the throwing step was never assigned.
-    public void Dispose()
+    private void Dispose()
     {
         try
         {
@@ -168,8 +214,8 @@ public sealed class Plugin : IDalamudPlugin
         }
         finally
         {
-            // Dalamud disposes this plugin's hooks once Dispose returns or throws, so a sim must be
-            // reverted by then even when a step above threw. A no-op after a clean Game.Dispose.
+            // Dalamud disposes this plugin's hooks once Dispose returns or throws, so a run must be
+            // stopped or lifted by then even when a step above threw. A no-op after a clean Game.Dispose.
             ZoneControl.Current?.Dispose();
         }
 
@@ -204,6 +250,7 @@ public sealed class Plugin : IDalamudPlugin
         LogManager?.Dispose();
         ConfigWindow?.Dispose();
         MainWindow?.Dispose();
+        FailureBanner?.Dispose();
 #if DEBUG
         DamageDebugWindow?.Dispose();
 #endif
@@ -323,4 +370,10 @@ public sealed class Plugin : IDalamudPlugin
 
     public void ToggleConfigUi() => ConfigWindow.Toggle();
     public void ToggleMainUi() => MainWindow.Toggle();
+
+    public void OpenSettings()
+    {
+        ConfigWindow.IsOpen = true;
+        ConfigWindow.BringToFront();
+    }
 }

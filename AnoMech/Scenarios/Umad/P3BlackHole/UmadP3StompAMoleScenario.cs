@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using AnoMech.Core.Game;
 using AnoMech.Core.Game.Ai;
 using AnoMech.Core.Game.Geometry;
 using AnoMech.Core.Game.Party;
@@ -33,6 +34,13 @@ public sealed class UmadP3StompAMoleScenario : IMultiplayerReplayable
     public void Run(SimWorld world, int? selectedAi) => blackHole.Run(world, selectedAi);
     public void Tick(float delta, float elapsed) => blackHole.Tick(delta, elapsed);
     public void RunInstanceEvents(SimWorld world) => blackHole.RunInstanceEvents(world);
+
+    // The sim's events come here, as the running scenario: the timeline they drive is Black Hole's.
+    private IWorldEventListener Timeline => blackHole;
+    public void OnActionResolved(ActionResolved resolved) => Timeline.OnActionResolved(resolved);
+    public void OnStatusAdded(StatusAdded added) => Timeline.OnStatusAdded(added);
+    public void OnStatusLost(StatusLost lost) => Timeline.OnStatusLost(lost);
+    public void OnTetherEnded(TetherEnded ended) => Timeline.OnTetherEnded(ended);
 
     public void DrawSettings() => blackHole.DrawSettings();
     public bool HasPerPlayerSettings => blackHole.HasPerPlayerSettings;

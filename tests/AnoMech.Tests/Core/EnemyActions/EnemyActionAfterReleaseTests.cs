@@ -1,4 +1,4 @@
-using System.Numerics;
+using AnoMech.Core.EnemyActions;
 using AnoMech.Core.Game;
 using AnoMech.Core.Native.Interfaces;
 using AnoMech.Core.SimObjects;
@@ -9,34 +9,34 @@ namespace AnoMech.Tests;
 
 // What a scenario hangs on an enemy's cast to follow its ActionEffect, cast by a helper spawned into
 // a running scenario.
-public class EnemyActionCastTests
+public class EnemyActionAfterReleaseTests
 {
-    private const uint NineSecondCast = ActionId.GrandCross;
-    private const uint InstantAction = ActionId.AutoAttack1;
+    private static readonly EnemyAction NineSecondCast = new(ActionId.GrandCross);
+    private static readonly EnemyAction InstantAction = new(ActionId.AutoAttack1);
 
     [Test]
-    public void WhatRunsAfterReleaseGoesOutRightBehindTheActionEffect()
+    public void ItGoesOutRightBehindTheActionEffect()
     {
         Dictionary<string, string>? lastSent = null;
         var helper = RunWithHelper(stopAt: 12f, (caster, timeline) =>
-            caster.Cast(NineSecondCast).AfterRelease(() => lastSent = timeline.Rows[^1]));
+            caster.Cast(NineSecondCast, afterRelease: () => lastSent = timeline.Rows[^1]));
 
         Assert.That(lastSent, Is.Not.Null, "never released");
         Assert.Multiple(() =>
         {
             Assert.That(lastSent!["kind"], Is.EqualTo("ability"));
-            Assert.That(lastSent["id"], Is.EqualTo(NineSecondCast.ToString()));
+            Assert.That(lastSent["id"], Is.EqualTo(ActionId.GrandCross.ToString()));
             Assert.That(lastSent["actor"], Is.EqualTo(helper));
         });
     }
 
     [Test]
-    public void HungOnAnActionAlreadyOutItRunsAtOnce()
+    public void AnInstantActionRunsItAtOnce()
     {
         var ranAtOnce = false;
         RunWithHelper(stopAt: 3f, (caster, _) =>
         {
-            caster.Cast(InstantAction).AfterRelease(() => ranAtOnce = true);
+            caster.Cast(InstantAction, afterRelease: () => ranAtOnce = true);
             Assert.That(ranAtOnce, Is.True);
         });
     }
@@ -47,7 +47,7 @@ public class EnemyActionCastTests
         var ran = false;
         RunWithHelper(stopAt: 12f, (caster, _) =>
         {
-            caster.Cast(NineSecondCast).AfterRelease(() => ran = true);
+            caster.Cast(NineSecondCast, afterRelease: () => ran = true);
             caster.CancelCast(CastCancelReason.Cancelled);
         });
 
@@ -69,9 +69,8 @@ public class EnemyActionCastTests
             {
                 timeline ??= ((FakeBattleCharas)Natives.BattleCharas).Timeline;
                 if (p.Crossed(1f))
-                    helper = p.World.SpawnEnemy(new EnemySpawnConfig(BNpcBaseId: BNpcBaseId.KefkaHelper, NameId: BNpcNameId.Kefka,
-                        Level: 1, Targetable: false, EnemyList: EnemyListMode.Never, Visibility: SpawnVisibility.InvisibleHelper,
-                        Placement: new Placement(Vector3.Zero, 0f)));
+                    helper = p.World.SpawnEnemy(new EnemySpawnConfig(BNpcBaseId: ScenarioSession.MarkHelperBNpcBase, Level: 1,
+                        EnemyList: EnemyListMode.Never, Visibility: SpawnVisibility.InvisibleHelper));
                 if (p.Crossed(2f))
                 {
                     helperId = helper!.EntityId.ToString("X8");

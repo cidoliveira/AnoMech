@@ -1,6 +1,9 @@
 using System.Numerics;
+using AnoMech.Core.Game;
 using AnoMech.Core.Game.Party;
 using AnoMech.Core.Native.Interfaces;
+using AnoMech.Multiplayer;
+using AnoMech.Scenarios;
 using AnoMech.Scenarios.Umad.P3BlackHole;
 using static AnoMech.Core.Game.Party.PartyRole;
 using static AnoMech.Tests.NegativeRun;
@@ -89,6 +92,30 @@ public class UmadP3StompAMoleScenarioTests
         => StompAMole(MeleeDpsA)
             .MoveBotAt(OnRunClock(151.7f), PhysRangedDps, to: new(0, 0))
             .ShouldKill(ActionId.StompAMole, MeleeDpsA);
+
+    // Reaches the timeline through the sim's events, which go to the running scenario: this wrapper.
+    [Test]
+    public void EmptyTowerWipes()
+        => StompAMole(MeleeDpsA)
+            .TeleportAt(OnRunClock(151.7f), to: new(0, 0))
+            .MoveBotAt(OnRunClock(151.7f), PhysRangedDps, to: new(0, 0))
+            .ShouldKill(ActionId.UnmitigatedImpact, PerRole.All);
+
+    // A member left to the interface's default would silently drop what Black Hole does there.
+    [TestCase(typeof(IScenario))]
+    [TestCase(typeof(IWorldEventListener))]
+    [TestCase(typeof(IMultiplayerReplayable))]
+    public void WrapsEverythingBlackHoleImplements(Type contract)
+    {
+        var blackHole = typeof(UmadP3BlackHoleScenario).GetInterfaceMap(contract);
+        var stomp = typeof(UmadP3StompAMoleScenario).GetInterfaceMap(contract);
+        var dropped = blackHole.InterfaceMethods
+            .Where((_, i) => blackHole.TargetMethods[i].DeclaringType == typeof(UmadP3BlackHoleScenario))
+            .Where(member => stomp.TargetMethods[Array.IndexOf(stomp.InterfaceMethods, member)].DeclaringType != typeof(UmadP3StompAMoleScenario))
+            .Select(member => member.Name);
+
+        Assert.That(dropped, Is.Empty);
+    }
 
     [Test]
     public void KnockDownShortABodyKillsStackers()

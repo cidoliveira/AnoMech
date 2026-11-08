@@ -31,7 +31,6 @@ public class UwuConstants
         public const uint GraniteGaol = 8729;
         public const uint Ifrit = 8730;
         public const uint UltimaWeapon = 8734;
-        public const uint Dummy = 9020;
     }
 
     public class BNpcLayoutId
@@ -45,12 +44,10 @@ public class UwuConstants
         public const uint BombBoulder = 0x701FD1;
         public const uint GraniteGaol = 0x701FD3;
         public const uint UltimaWeapon = 0x701FD7;
-        public const uint Dummy = 0x704D3F;
     }
 
     public class BNpcNameId
     {
-        public const uint Dummy = 108;
         public const uint BombBoulder = 1803;
         public const uint Ifrit = 1185;
         public const uint Garuda = 1644;
@@ -131,6 +128,7 @@ public class UwuConstants
         public const ushort ThermalLow = 1525;
         public const ushort AccursedFlame = 1527;
         public const ushort Woken = 1529;
+        public const ushort ViscousAetheroplasm = 1532;
     }
 
     public class TetherId

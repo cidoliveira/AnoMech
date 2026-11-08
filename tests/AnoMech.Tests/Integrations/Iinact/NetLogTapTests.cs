@@ -12,6 +12,7 @@ namespace AnoMech.Tests;
 public class NetLogTapTests
 {
     private const uint Instance = 0x800375D2;
+    private const uint SetNameCategory = 0x62;
 
     private readonly List<string> lines = [];
     private bool active;
@@ -209,6 +210,45 @@ public class NetLogTapTests
             Assert.That(lines[0].Split('|')[2..9], Is.EqualTo(new[] { "13DC", Natives.Data.StatusName(0x13DC), "20.00", Id(kefka.EntityId), kefka.Name, Id(Player.EntityId), Player.Name }));
             Assert.That(lines[1].Split('|')[4], Is.EqualTo("30.00"));
         });
+    }
+
+    // cactbot matches a status's whole value: Kefka Says' tells are 808 with count 45F to 462.
+    [Test]
+    public void AStatusValueAboveAByteIsWrittenWhole()
+    {
+        var kefka = SpawnKefka();
+
+        kefka.ReceiveStatusList([new StatusSlot(0x808, 0x462, 0f, 0xE0000000)], 0, 0, 0);
+
+        Assert.That(Fields("26")[9], Is.EqualTo("462"));
+    }
+
+    [Test]
+    public void AHelpersLinesCarryTheNameItWasLastGiven()
+    {
+        var helper = SpawnKefka();
+
+        helper.ActorControl(SetNameCategory, BNpcNameId.NeoExdeath);
+        helper.ReceiveActorCast(new ActorCastData(0xC394, ActionType.Action, 5f, 0f, false, 1f, new Vector3(100f, 0f, 100f), helper.GameObjectId));
+
+        var line = Fields("20");
+        Assert.Multiple(() =>
+        {
+            Assert.That(line[3], Is.EqualTo("Neo Exdeath"), "as the caster");
+            Assert.That(line[7], Is.EqualTo("Neo Exdeath"), "as its own target");
+        });
+    }
+
+    // The sheet has "fragment of fate"; cactbot filters on the name as the game shows it.
+    [Test]
+    public void AHelpersNameIsCapitalisedAsTheGameShowsIt()
+    {
+        var helper = SpawnKefka();
+
+        helper.ActorControl(SetNameCategory, AnoMech.Scenarios.Fru.FruConstants.BNpcNameId.FragmentOfFate);
+        helper.ReceiveActorCast(new ActorCastData(0xC394, ActionType.Action, 5f, 0f, false, 1f, new Vector3(100f, 0f, 100f), helper.GameObjectId));
+
+        Assert.That(Fields("20")[3], Is.EqualTo("Fragment of Fate"));
     }
 
     [Test]

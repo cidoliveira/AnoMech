@@ -33,6 +33,7 @@ internal sealed class NetLogTap
     private const uint HeadMarkerCategory = 0x22;
     private const uint SetTetherCategory = 0x23;
     private const uint TargetableCategory = 0x36;
+    private const uint SetNameCategory = 0x62;
     private const uint InterruptedFlag = 1;
 
     // The ActorControl categories OverlayPlugin writes as ActorControlExtra (273) lines.
@@ -91,7 +92,8 @@ internal sealed class NetLogTap
     private NetLogActor Actor(uint entityId)
     {
         if (entityId is 0 or NoTarget) return NetLogActor.None;
-        return new NetLogActor(entityId, Proxy(entityId)?.Name ?? "");
+        var shown = charas.TryGetValue(entityId, out var chara) ? chara.ShownName : null;
+        return new NetLogActor(entityId, shown ?? Proxy(entityId)?.Name ?? "");
     }
 
     private NetLogActor Actor(GameObjectId? id) => id is { } objectId ? Actor(objectId.ObjectId) : NetLogActor.None;
@@ -202,11 +204,26 @@ internal sealed class NetLogTap
             case TargetableCategory:
                 write(NetLogLine.NameToggle(actor, args[0] != 0));
                 break;
+            // A pooled helper acts under its boss's name, which triggers filter on.
+            case SetNameCategory:
+                chara.ShownName = ShownName(args[0]);
+                break;
             default:
                 if (ExtraCategories.Contains(category))
                     write(NetLogLine.ActorControlExtra(actor.Id, category, args[0], args[1], args[2], args[3]));
                 break;
         }
+    }
+
+    // The sheet holds some names in lower case; the game shows them capitalised, as triggers match them.
+    private static string? ShownName(uint bnpcNameId)
+    {
+        if (Natives.Data.BNpcName(bnpcNameId) is not { } name) return null;
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < words.Length; i++)
+            if (i == 0 || words[i] is not ("of" or "the"))
+                words[i] = char.ToUpperInvariant(words[i][0]) + words[i][1..];
+        return string.Join(' ', words);
     }
 
     private void ObjectControl(IEventObjectProxy obj, uint category, uint[] args)
@@ -237,18 +254,16 @@ internal sealed class NetLogTap
             if (before.TryGetValue(key, out var was) && slot.Param == was.Param && slot.RemainingTime <= was.RemainingTime + RefreshTolerance)
                 continue;
             write(NetLogLine.GainsEffect(slot.StatusId, Natives.Data.StatusName(slot.StatusId),
-                slot.RemainingTime > 0f ? slot.RemainingTime : PermanentDuration, Actor(slot.SourceEntityId), target, Stacks(slot.Param),
+                slot.RemainingTime > 0f ? slot.RemainingTime : PermanentDuration, Actor(slot.SourceEntityId), target, slot.Param,
                 targetMaxHp, MaxHealthOf(slot.SourceEntityId)));
         }
         foreach (var (key, was) in before)
         {
             if (now.ContainsKey(key)) continue;
             write(NetLogLine.LosesEffect(was.StatusId, Natives.Data.StatusName(was.StatusId), Actor(was.SourceEntityId), target,
-                Stacks(was.Param), targetMaxHp, MaxHealthOf(was.SourceEntityId)));
+                was.Param, targetMaxHp, MaxHealthOf(was.SourceEntityId)));
         }
     }
-
-    private static ushort Stacks(ushort param) => (ushort)(param & 0xFF);
 
     private static readonly Dictionary<(ushort, uint), StatusSlot> NoStatuses = [];
 
@@ -314,8 +329,9 @@ internal sealed class NetLogTap
         public uint BNpcBaseId { get; init; }
         public int SpawnOrder { get; init; }
         public bool Tethered { get; set; }
+        public string? ShownName { get; set; }
         public Dictionary<(ushort, uint), StatusSlot> Statuses { get; set; } = [];
-        public NetLogActor Actor => new(inner.EntityId, inner.Name);
+        public NetLogActor Actor => new(inner.EntityId, ShownName ?? inner.Name);
 
         public bool Exists => inner.Exists;
         public int Slot => inner.Slot;
